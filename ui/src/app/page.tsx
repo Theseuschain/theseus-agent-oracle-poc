@@ -11,34 +11,72 @@ import {
   TimelineEntry,
   UserPosition,
 } from "@/lib/types";
+import {
+  ScenarioState,
+  applyPositionAction,
+  applyReset,
+  applyTamper,
+  deriveFeed,
+  deriveTimeline,
+  deriveVenues,
+  initialScenario,
+} from "@/lib/mock-scenario";
 
 export default function HomePage() {
-  const [feed, setFeed] = useState<FeedSnapshot | null>(null);
-  const [venues, setVenues] = useState<VenueReading[]>([]);
-  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
-  const [position, setPosition] = useState<UserPosition | null>(null);
+  // Mode is detected once on mount via /api/feed. After that, in mock mode
+  // the client owns the state — Vercel serverless instances don't share
+  // module-level state, so a server-side store wouldn't survive the
+  // tamper → poll round trip.
   const [mode, setMode] = useState<"live" | "mock">("mock");
+  const [scenario, setScenario] = useState<ScenarioState>(initialScenario);
 
+  // Live-mode state. Only populated when the chain is reachable.
+  const [liveFeed, setLiveFeed] = useState<FeedSnapshot | null>(null);
+  const [liveVenues, setLiveVenues] = useState<VenueReading[]>([]);
+  const [liveTimeline, setLiveTimeline] = useState<TimelineEntry[]>([]);
+  const [livePosition, setLivePosition] = useState<UserPosition | null>(null);
+
+  // Detect mode + (in live mode) refresh.
   const refresh = useCallback(async () => {
-    const [feedRes, timelineRes, positionRes] = await Promise.all([
-      fetch("/api/feed", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/timeline", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/position", { cache: "no-store" }).then((r) => r.json()),
-    ]);
-    setFeed(feedRes.feed);
-    setVenues(feedRes.venues);
-    setTimeline(timelineRes.entries);
-    setPosition(positionRes.position);
-    setMode(feedRes.mode);
+    try {
+      const [feedRes, timelineRes, positionRes] = await Promise.all([
+        fetch("/api/feed", { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/timeline", { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/position", { cache: "no-store" }).then((r) => r.json()),
+      ]);
+      setMode(feedRes.mode);
+      if (feedRes.mode === "live") {
+        setLiveFeed(feedRes.feed);
+        setLiveVenues(feedRes.venues);
+        setLiveTimeline(timelineRes.entries);
+        setLivePosition(positionRes.position);
+      }
+    } catch {
+      setMode("mock");
+    }
   }, []);
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 4000);
-    return () => clearInterval(id);
   }, [refresh]);
 
+  // In live mode, poll every 4s. In mock mode, the client owns state — no poll.
+  useEffect(() => {
+    if (mode !== "live") return;
+    const id = setInterval(refresh, 4000);
+    return () => clearInterval(id);
+  }, [mode, refresh]);
+
+  const feed = mode === "mock" ? deriveFeed(scenario) : liveFeed;
+  const venues = mode === "mock" ? deriveVenues(scenario) : liveVenues;
+  const timeline = mode === "mock" ? deriveTimeline(scenario) : liveTimeline;
+  const position = mode === "mock" ? scenario.position : livePosition;
+
   const handleTamper = async (venue: VenueReading["venue"], priceUsd: number) => {
+    if (mode === "mock") {
+      setScenario((s) => applyTamper(s, venue, priceUsd));
+      return;
+    }
     await fetch("/api/tamper", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -48,6 +86,10 @@ export default function HomePage() {
   };
 
   const handleReset = async () => {
+    if (mode === "mock") {
+      setScenario(applyReset);
+      return;
+    }
     await fetch("/api/reset", { method: "POST" });
     await refresh();
   };
@@ -61,9 +103,13 @@ export default function HomePage() {
       return { ok: false, revertReason: "invalid amount" };
     }
 
-    // In mock mode, treat refused borrows/withdraws as reverts.
     if (mode === "mock" && feed?.decision === "REFUSED" && (action === "borrow" || action === "withdraw")) {
       return { ok: false, revertReason: `PriceRefused(${feed.reasonHash.slice(0, 12)}…)` };
+    }
+
+    if (mode === "mock") {
+      setScenario((s) => applyPositionAction(s, action, amount));
+      return { ok: true };
     }
 
     const res = await fetch("/api/position", {
@@ -128,7 +174,7 @@ function Header({ mode }: { mode: "live" | "mock" }) {
         <p className="text-fg-dim text-sm md:text-base max-w-2xl">
           Aave V3, unmodified. The price oracle is a SHIP agent reading Coinbase,
           Binance, and a Uniswap V3 pool directly. When the venues disagree, the
-          agent refuses to price — and Aave's price-touching paths revert with it.
+          agent refuses to price — and Aave&apos;s price-touching paths revert with it.
         </p>
       </div>
       <div className="hidden sm:block">
