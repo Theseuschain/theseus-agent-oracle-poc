@@ -26,7 +26,14 @@ interface MockState {
   position: UserPosition;
 }
 
-const state: MockState = {
+// Persist on globalThis so route handlers (which Next.js dev-mode loads
+// in separate module instances) share the same state object.
+declare global {
+  // eslint-disable-next-line no-var
+  var __theseusOracleMockState: MockState | undefined;
+}
+
+const state: MockState = (globalThis.__theseusOracleMockState ??= {
   refused: false,
   tampered: new Set(),
   timeline: seedTimeline(),
@@ -38,7 +45,7 @@ const state: MockState = {
     healthFactor: Infinity,
     ltv: 0,
   },
-};
+});
 
 function seedTimeline(): TimelineEntry[] {
   const t: TimelineEntry[] = [];
@@ -128,7 +135,18 @@ export function mockTamper(venue: VenueReading["venue"], priceUsd: number): void
   state.tamperedPrice = priceUsd;
   state.tamperedVenue = venue;
   state.refused = true;
-  state.refusedReason = `${venue} divergent from coinbase by ${(priceUsd / 3502.4).toFixed(1)}×`;
+
+  // Compare against a venue that *isn't* the tampered one. The reconciliation
+  // policy fires when the tampered venue diverges from the others — so the
+  // message should name the venue we're comparing against.
+  const reference = venue === "coinbase" ? "binance" : "coinbase";
+  const referencePrice = 3502.4;
+  const ratio = priceUsd / referencePrice;
+  const direction =
+    ratio >= 2 ? `${ratio.toFixed(1)}×`
+    : ratio <= 0.5 ? `${(1 / ratio).toFixed(1)}× below`
+    : `${Math.abs((ratio - 1) * 100).toFixed(1)}%`;
+  state.refusedReason = `${venue} divergent from ${reference} by ${direction}`;
   state.timeline.unshift({
     block: currentBlock(),
     decision: "REFUSED",
