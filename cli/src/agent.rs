@@ -13,8 +13,10 @@
 use crate::config::Config;
 use anyhow::{anyhow, Context, Result};
 use parity_scale_codec::Encode;
+use sp_core::crypto::Ss58Codec;
 use subxt::{
     dynamic::{self, Value},
+    utils::AccountId32 as SubxtAccountId32,
     OnlineClient, PolkadotConfig,
 };
 use subxt_signer::sr25519::dev;
@@ -43,7 +45,7 @@ pub async fn tamper(cfg: &Config, venue: &str, price: f64, runs: u32) -> Result<
         .await
         .with_context(|| format!("connecting to {}", cfg.substrate_ws))?;
 
-    let agent_account = parse_ss58_or_hex(&cfg.agent_id)?;
+    let agent_account = parse_account(&cfg.agent_id)?;
 
     let tool_name = match venue {
         "coinbase" => "coinbase_orderbook",
@@ -69,10 +71,10 @@ pub async fn tamper(cfg: &Config, venue: &str, price: f64, runs: u32) -> Result<
         "ToolOverride",
         "override_tool",
         vec![
-            Value::from_bytes(agent_account.clone()),
+            account_value(&agent_account),
             Value::from_bytes(tool_name.as_bytes()),
             Value::from_bytes(value_bytes),
-            Value::u128(runs as u128),
+            Value::u128(runs as u128),  // SCALE u32 will accept smaller-than-128 values
         ],
     );
 
@@ -98,12 +100,12 @@ pub async fn tamper(cfg: &Config, venue: &str, price: f64, runs: u32) -> Result<
 
 pub async fn reset(cfg: &Config) -> Result<()> {
     let api = OnlineClient::<PolkadotConfig>::from_url(&cfg.substrate_ws).await?;
-    let agent_account = parse_ss58_or_hex(&cfg.agent_id)?;
+    let agent_account = parse_account(&cfg.agent_id)?;
 
     let tx = dynamic::tx(
         "ToolOverride",
         "clear_overrides",
-        vec![Value::from_bytes(agent_account)],
+        vec![account_value(&agent_account)],
     );
 
     let signer = dev::alice();
@@ -119,14 +121,14 @@ pub async fn reset(cfg: &Config) -> Result<()> {
 
 pub async fn status(cfg: &Config) -> Result<AgentStatus> {
     let api = OnlineClient::<PolkadotConfig>::from_url(&cfg.substrate_ws).await?;
-    let agent_account = parse_ss58_or_hex(&cfg.agent_id)?;
+    let agent_account = parse_account(&cfg.agent_id)?;
 
     // Iterate the (agent, _) prefix of ToolOverride.Overrides to detect any
     // active tamper.
     let storage_query = dynamic::storage(
         "ToolOverride",
         "Overrides",
-        vec![Value::from_bytes(agent_account.clone())],
+        vec![account_value(&agent_account)],
     );
 
     let mut iter = api
@@ -152,17 +154,29 @@ pub async fn status(cfg: &Config) -> Result<AgentStatus> {
     })
 }
 
-fn parse_ss58_or_hex(s: &str) -> Result<Vec<u8>> {
+/// Parse an SS58- or hex-encoded AccountId32 into the canonical 32-byte form
+/// subxt expects. Hex must be 0x-prefixed and exactly 32 bytes.
+fn parse_account(s: &str) -> Result<SubxtAccountId32> {
     let s = s.trim();
-    if let Some(stripped) = s.strip_prefix("0x") {
-        return hex::decode(stripped).context("hex decode");
-    }
+    let bytes: [u8; 32] = if let Some(stripped) = s.strip_prefix("0x") {
+        let v = hex::decode(stripped).context("hex decode")?;
+        v.try_into()
+            .map_err(|v: Vec<u8>| anyhow!("expected 32 bytes, got {}", v.len()))?
+    } else {
+        let acct = sp_core::crypto::AccountId32::from_string(s)
+            .map_err(|e| anyhow!("not ss58 or hex: {s} ({e:?})"))?;
+        let raw: &[u8] = acct.as_ref();
+        raw.try_into()
+            .map_err(|_: std::array::TryFromSliceError| anyhow!("ss58 returned wrong length"))?
+    };
+    Ok(SubxtAccountId32(bytes))
+}
 
-    // ss58 → public-key bytes. sp_core::crypto::AccountId32 from str handles ss58.
-    let acct = sp_core::crypto::AccountId32::from_string(s)
-        .map_err(|e| anyhow!("not ss58 or hex: {s} ({e:?})"))?;
-    let bytes: &[u8] = acct.as_ref();
-    Ok(bytes.to_vec())
+/// Build a `Value` shaped like `T::AccountId` for subxt's dynamic encoder.
+/// `AccountId32` is `(pub [u8; 32])` — a tuple struct around 32 bytes — so the
+/// encoder needs an unnamed composite wrapping a byte sequence.
+fn account_value(acct: &SubxtAccountId32) -> Value {
+    Value::unnamed_composite([Value::from_bytes(acct.0)])
 }
 
 fn now_seconds() -> u64 {

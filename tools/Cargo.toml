@@ -20,7 +20,7 @@ thiserror = "1"
 tracing = "0.1"
 
 # Used for the Uniswap V3 pool reads (mainnet RPC call to observe()/slot0()).
-alloy = { version = "0.8", features = ["provider-http", "contract", "sol-types"] }
+alloy = { version = "0.8", features = ["network", "providers", "transport-http", "contract", "sol-types", "rpc-types-eth"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// Runtime addresses + endpoints. Read from the deployments/ directory that
 /// scripts/deploy.sh writes to, plus environment variables for endpoints.
@@ -58,9 +58,5 @@ impl Config {
 
             agent_id: read_addr("AgentId.txt")?,
         })
-    }
-
-    pub fn deployments_dir(&self) -> &Path {
-        Path::new(".")
     }
 }

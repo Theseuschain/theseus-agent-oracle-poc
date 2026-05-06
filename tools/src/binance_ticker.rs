@@ -71,7 +71,12 @@ pub async fn binance_ticker_with_base(symbol: &str, base_url: &str) -> Result<Ve
         Err(e) => return Ok(VenueReading::failed("binance", format!("parse_price: {e}"))),
     };
 
-    let volume: f64 = body.quote_volume.parse().unwrap_or(0.0);
+    // Don't silently zero the depth proxy on parse failure — that gives Binance
+    // zero weight in the median and can flip a clean reading into a refusal.
+    let volume: f64 = match body.quote_volume.parse() {
+        Ok(v) if v > 0.0 => v,
+        _ => return Ok(VenueReading::failed("binance", "bad_volume")),
+    };
 
     // close_time is in milliseconds.
     let timestamp = body.close_time / 1000;

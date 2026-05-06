@@ -74,9 +74,7 @@ pub async fn uniswap_twap(
         return Ok(VenueReading::failed("uniswap", "zero_window"));
     }
 
-    let provider = match ProviderBuilder::new().on_http(rpc_url.parse()?) {
-        p => p,
-    };
+    let provider = ProviderBuilder::new().on_http(rpc_url.parse()?);
     let pool_iface = IUniswapV3Pool::new(pool, &provider);
 
     // 1. observe([window, 0]) -> tickCumulatives at (now - window) and (now)
@@ -100,7 +98,9 @@ pub async fn uniswap_twap(
     let tick_cum_old: i128 = cumulatives[0].as_i128();
     let tick_cum_new: i128 = cumulatives[1].as_i128();
     let tick_diff = tick_cum_new - tick_cum_old;
-    let avg_tick = (tick_diff / window_seconds as i128) as f64;
+    // Convert to f64 *before* dividing — integer division would drop sub-tick
+    // precision and bias the price downward by up to one tick (~1bp).
+    let avg_tick = tick_diff as f64 / window_seconds as f64;
 
     // 2. Convert avg tick to a price ratio (token1 per token0):
     //    price = 1.0001 ^ tick
@@ -160,10 +160,12 @@ pub async fn uniswap_twap(
 }
 
 fn u256_to_f64(v: U256, decimals: u8) -> f64 {
-    // Sufficient for reserves of normal magnitude. For pools bigger than
-    // 2^53 raw units we'd want a wider conversion; not relevant for the PoC.
+    // For pool reserves we don't expect U256 values beyond u128 today, but
+    // a silent zero-out on overflow turns into "zero TVL → zero depth weight",
+    // which would bias reconciliation. Saturate to f64::MAX instead so the
+    // venue is at least not penalized.
     let s = v.to_string();
-    let n: u128 = s.parse().unwrap_or(0);
+    let n: u128 = s.parse().unwrap_or(u128::MAX);
     n as f64 / 10f64.powi(decimals.into())
 }
 

@@ -67,13 +67,15 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        /// Origin allowed to install / clear overrides. Typically root or a
-        /// dedicated demo-admin account. **Do not use a public origin.**
+        /// SECURITY: must be a privileged origin (e.g. `EnsureRoot` or a
+        /// sudo-equivalent). Wiring this to `EnsureSigned<T::AccountId>` would
+        /// let any signed account install overrides and is a misconfiguration.
         type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Origin that the tool-executor uses to call `tick`. Should be a
-        /// runtime-internal origin (the tool-executor signs on behalf of the
-        /// dispatching agent), not user-callable.
+        /// Origin the tool-executor uses to call `tick`. Should be a
+        /// runtime-internal origin proving the call is on behalf of `agent`,
+        /// not user-callable. The returned `AccountId` must equal the `agent`
+        /// argument or `tick` errors with `TickOriginMismatch`.
         type TickOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
     }
 
@@ -95,6 +97,9 @@ pub mod pallet {
         ValueTooLong,
         ToolNameTooLong,
         ZeroRuns,
+        /// `tick` was called by an origin that doesn't match the agent it
+        /// claims to be acting for.
+        TickOriginMismatch,
     }
 
     #[pallet::call]
@@ -167,11 +172,14 @@ pub mod pallet {
         pub fn tick(origin: OriginFor<T>, agent: T::AccountId) -> DispatchResult {
             // The tool-executor's origin proves it's running on behalf of `agent`.
             let signer = T::TickOrigin::ensure_origin(origin)?;
-            ensure!(signer == agent, frame_system::Error::<T>::CallFiltered);
+            ensure!(signer == agent, Error::<T>::TickOriginMismatch);
 
+            // Two-pass: collect everything, then mutate. Inserting back into
+            // the same key being iterated is undefined for some hashers.
+            let entries: sp_std::vec::Vec<_> = Overrides::<T>::iter_prefix(&agent).collect();
             let mut expired = sp_std::vec![];
 
-            Overrides::<T>::iter_prefix(&agent).for_each(|(tool, entry)| {
+            for (tool, entry) in entries {
                 if entry.runs_remaining <= 1 {
                     expired.push(tool);
                 } else {
@@ -181,7 +189,7 @@ pub mod pallet {
                         OverrideEntry { value: entry.value, runs_remaining: entry.runs_remaining - 1 },
                     );
                 }
-            });
+            }
 
             for tool in expired {
                 Overrides::<T>::remove(&agent, &tool);
@@ -199,7 +207,7 @@ pub mod pallet {
         /// Does not consume the override — `tick` is the consumer.
         pub fn resolve(agent: &T::AccountId, tool: &[u8]) -> Option<Vec<u8>> {
             let tool_name: ToolName = tool.to_vec().try_into().ok()?;
-            Overrides::<T>::get(agent, tool_name).map(|e| e.value.into_inner())
+            Overrides::<T>::get(agent, &tool_name).map(|e| e.value.into_inner())
         }
     }
 }

@@ -9,7 +9,7 @@ use crate::config::Config;
 use anyhow::Result;
 use alloy::{
     primitives::{Address, U256},
-    providers::{Provider, ProviderBuilder},
+    providers::{Provider, ProviderBuilder, WalletProvider},
     signers::local::PrivateKeySigner,
     sol,
 };
@@ -117,20 +117,24 @@ pub async fn repay(cfg: &Config, amount_usdc: &str) -> Result<()> {
     let provider = provider(cfg)?;
     let pool: Address = cfg.pool.parse()?;
     let usdc: Address = cfg.usdc.parse()?;
+    let from = provider.default_signer_address();
 
-    let amount = if amount_usdc == "max" {
-        U256::MAX
+    // For "max", we approve the user's full USDC balance — sufficient for repayAll
+    // without leaving an infinite approval lying around after the demo.
+    let (approve_amount, repay_amount) = if amount_usdc == "max" {
+        let balance = IERC20::new(usdc, &provider).balanceOf(from).call().await?._0;
+        (balance, U256::MAX)  // U256::MAX repay tells Aave "all of it"
     } else {
-        parse_amount(amount_usdc, 6)?
+        let n = parse_amount(amount_usdc, 6)?;
+        (n, n)
     };
 
     let token = IERC20::new(usdc, &provider);
-    token.approve(pool, amount).send().await?.watch().await?;
+    token.approve(pool, approve_amount).send().await?.watch().await?;
 
     let pool_iface = IPool::new(pool, &provider);
-    let from = provider.default_signer_address();
     pool_iface
-        .repay(usdc, amount, VARIABLE_RATE_MODE, from)
+        .repay(usdc, repay_amount, VARIABLE_RATE_MODE, from)
         .send().await?.watch().await?;
 
     println!("repaid {}", amount_usdc);

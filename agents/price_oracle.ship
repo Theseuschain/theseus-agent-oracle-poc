@@ -16,7 +16,10 @@ const SOUL: string = include!("./PRICE_ORACLE_SOUL.md");
 const POLICY: string = include!("./RECONCILIATION_POLICY.md");
 
 // EVM address of the AgentPriceFeed contract on Theseus EVM.
-// Filled in at deploy time by scripts/deploy.sh (writes to AGENT_FEED.txt).
+// Set at deploy time by `theseus-cli set-agent-const` (called from
+// scripts/setup_demo.sh after AgentPriceFeed.sol is deployed). Stays at the
+// zero address pre-deploy; the agent's evm_call to a zero address is a no-op
+// in the sense that no contract will accept it.
 const FEED_ADDRESS: address = 0x0000000000000000000000000000000000000000;
 
 // Asset we price. WETH/USD for v0.

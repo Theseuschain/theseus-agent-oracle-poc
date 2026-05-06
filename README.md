@@ -88,8 +88,8 @@ This is the same pattern Moonbeam and Astar use (Substrate-Wasm contracts call E
 ./scripts/setup_demo.sh
 # starts a local Theseus node, deploys Aave V3 + AgentPriceFeed, registers price_oracle agent
 
-op deposit 1ETH
-op borrow 1500USDC
+op deposit 1
+op borrow 1500
 # both succeed; the agent's reconciled price is around $3500/ETH
 
 op tamper uniswap --price 100000
@@ -98,13 +98,13 @@ op tamper uniswap --price 100000
 # wait one schedule tick (~60s)
 op status
 # AgentPriceFeed.decision == REFUSED
-# reason: "Uniswap divergent from Coinbase by 28x"
+# reason: "uniswap divergent from coinbase by 28x"
 
-op borrow 100USDC
-# reverts: PriceOracle: REFUSED
+op borrow 100
+# reverts: PriceRefused(0x...)
 
-op liquidate <user>
-# reverts: PriceOracle: REFUSED
+op liquidate <user> USDC 100
+# reverts: PriceRefused(0x...)
 ```
 
 ## Status
