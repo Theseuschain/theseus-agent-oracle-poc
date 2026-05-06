@@ -1,69 +1,87 @@
 # Status
 
-What's wired vs. what still needs work to run end-to-end. Updated with each commit.
+What's wired vs. what still needs work to run end-to-end.
 
 ## Wired
 
 | Component | State |
 |-----------|-------|
-| `contracts/src/AgentPriceFeed.sol` | Complete. Chainlink V2 (`latestAnswer`) and V3 (`latestRoundData`) interfaces. Reverts on `REFUSED`. |
-| `contracts/script/DeployFeed.s.sol` | Complete. Reads agent EVM address from env. |
-| `contracts/script/DeployAave.s.sol` | Complete. Deploys registry, addresses provider, ACL, pool impl, configurator, oracle, token impls. |
+| `contracts/src/AgentPriceFeed.sol` | Complete. Chainlink V2 + V3 interfaces. Reverts on `REFUSED`. |
+| `contracts/src/mocks/{MockWETH9,MockERC20,FixedPriceFeed}.sol` | Complete. Local-demo assets. |
+| `contracts/script/DeployFeed.s.sol` | Complete. |
+| `contracts/script/DeployAave.s.sol` | Complete. Deploys registry, addresses provider, ACL, pool, configurator, oracle, token impls. |
 | `contracts/script/ConfigureMarket.s.sol` | Complete. Wires WETH/USDC reserves; points oracle at `AgentPriceFeed`. |
-| `agents/price_oracle.ship` | Complete. Schedule = 10 blocks. Reads three venues, reconciles, calls `evm_call` with `reportPrice` or `reportRefusal`. |
-| `agents/PRICE_ORACLE_SOUL.md` | Complete. |
-| `agents/RECONCILIATION_POLICY.md` | Complete. 50bps divergence threshold; depth-weighted median. |
-| `tools/*.rs` | Documentation only. Each describes the tool-executor implementation needed. |
-| `cli/` | Compiles. Aave-side commands use real alloy bindings; Substrate-side stubs print intent. |
-| `scripts/vendor_aave.sh` | Complete. Pinned to a known Aave V3 commit. |
-| `scripts/setup_demo.sh` | Complete shape. Depends on `theseus-cli`, `theseus-node`, and a `DeployMocks.s.sol` (TODO). |
-| `scripts/demo.sh` | Complete. Runs the full happy-path → tamper → refusal scenario. |
+| `contracts/script/DeployMocks.s.sol` | Complete. WETH9, USDC mock, fixed $1 USDC feed. |
+| `contracts/foundry.toml` + `scripts/vendor_aave.sh` | Complete. Aave V3 pinned commit. |
+| `agents/price_oracle.ship` | Complete. Schedule = 10 blocks. Reads three venues, reconciles, calls `evm_call`. |
+| `agents/{PRICE_ORACLE_SOUL,RECONCILIATION_POLICY}.md` | Complete. |
+| `tools/` Rust crate | **Buildable.** Real implementations of `coinbase_orderbook`, `binance_ticker`, `uniswap_twap`. `evm_call.rs` documents the runtime-side impl (can't be built standalone — needs `pallet-evm` dispatch). |
+| `pallets/tool-override/` | **Buildable** as a standalone FRAME pallet. Storage, four extrinsics (`override_tool`, `clear_override`, `clear_overrides`, `tick`), `Pallet::resolve()` for the tool-executor to call. |
+| `cli/` | **Compiles.** Aave-side commands use real alloy bindings. Substrate-side uses subxt's dynamic API targeting `pallet-tool-override`. |
+| `scripts/{vendor_aave,setup_demo,demo}.sh` | Complete. |
 
-## Not yet wired
+## Runtime integration steps required
 
-These are the pieces blocking end-to-end execution.
+These are the only items that have to happen *inside Theseus's runtime crate*
+(which is not in this repo). Each is a small, isolated change:
 
-### 1. `tool-executor` runtime additions
+1. **Register the tool-override pallet.** Add to `Cargo.toml`, configure
+   `Config`, add to `construct_runtime!`. See [`pallets/tool-override/README.md`](pallets/tool-override/README.md).
 
-The four tools the agent declares are not implemented yet in Theseus's `tool-executor` crate:
+2. **Register the venue tools with the tool-executor.** The tool-executor
+   needs to wrap each function in `tools/src/` as a `Tool` trait impl and add
+   it to the registry under the right name (`coinbase_orderbook`,
+   `binance_ticker`, `uniswap_twap`).
 
-- `coinbase_orderbook(symbol)` — needs HTTP fetch + book-walking logic.
-- `binance_ticker(symbol)` — needs HTTP fetch.
-- `uniswap_twap(pool, window)` — needs an EVM-RPC client to read mainnet pools (separate from the Theseus EVM).
-- `evm_call(target, data, value)` — the SHIP↔EVM precompile, the one runtime dependency this PoC explicitly adds. See [`tools/evm_call.rs`](tools/evm_call.rs).
+3. **Implement the `evm_call` precompile/tool.** A SHIP→EVM dispatch through
+   `pallet_evm::Pallet::call`. Sketch in [`tools/src/evm_call.rs`](tools/src/evm_call.rs).
+   This is the SHIP↔EVM bridge that's the only meaningful runtime addition
+   for this PoC.
 
-Each tool stub in [`tools/`](tools/) documents the expected behavior, config, and signature. They're meant to drop into `tool-executor/src/tools.rs` next to the existing `get_price`.
-
-### 2. `DeployMocks.s.sol`
-
-`scripts/setup_demo.sh` references `contracts/script/DeployMocks.s.sol` which deploys local-only ERC-20 mocks for WETH and USDC plus a fixed-`$1` USDC feed. Not written yet — straightforward to add (one ERC-20 + one constant feed).
-
-### 3. CLI Substrate-side stubs
-
-[`cli/src/agent.rs`](cli/src/agent.rs) currently prints what the tamper / reset / status calls *would* do. Wiring the real subxt calls requires:
-
-- A demo `ToolOverridePallet` in the Theseus runtime (also feature-flagged off).
-- subxt-generated metadata for that pallet.
-
-The tamper pallet is demo-only. In production, agents resolve tools through the standard tool-executor and there's no override path.
-
-### 4. Aave reserve initialization parameters
-
-`ConfigureMarket.s.sol` uses placeholder LTV (8000), liquidation threshold (8500), and liquidation bonus (10500) for WETH. These are reasonable defaults, but for a demo that's about price refusal — not liquidation mechanics — they're not load-bearing.
+4. **Hook the tool-executor's tool dispatch loop:** before invoking the real
+   tool, call `pallet_tool_override::Pallet::<Runtime>::resolve(agent, tool)`
+   and return the override bytes if any. At the start of each scheduled
+   agent run, dispatch `tool_override::tick(agent)`.
 
 ## What's intentionally stubbed
 
-- **TensorCommit emission**. The `reportRefusal(bytes32 reasonHash)` call anchors a hash. The matching reasoning blob would normally be committed via TensorCommit at the same block. Wiring that requires SHIP runtime support that's not in scope for v0 — the on-chain hash is enough to demonstrate the architecture.
+- **Next-run block in `op status`.** The agent's scheduler-driven next run
+  block lives in whatever pallet handles SHIP scheduling. We surface zeros
+  for that field; the user infers liveness from "did the feed update recently?"
+  in the same status line.
 
-- **Production interest rate strategy**. `ConfigureMarket` deploys one rate strategy with placeholder parameters. Nothing in the demo depends on the rate curve.
+- **TensorCommit emission for `reportRefusal`.** The contract anchors
+  `keccak256(reasoning)`; the matching reasoning blob commit happens through
+  whatever TensorCommit hook the SHIP runtime exposes. Out of scope for v0;
+  the on-chain hash is enough to demonstrate the architecture.
 
-## Reproduction (once the gaps are closed)
+- **Production-grade Aave reserve params.** `ConfigureMarket.s.sol` uses
+  placeholder LTV/liquidation-threshold/liquidation-bonus. The demo doesn't
+  depend on liquidation mechanics — only on the price-touching paths
+  reverting when the agent refuses.
+
+## Verifying the tools crate
+
+```bash
+cd tools/
+cargo build
+cargo test
+```
+
+The unit tests cover the parsing logic for both Coinbase book levels and
+Binance ticker responses. Live integration is exercised by the demo script.
+
+## Reproduction (after the four runtime integration steps land)
 
 ```bash
 git clone https://github.com/Theseuschain/agent-oracle-poc
 cd agent-oracle-poc
-./scripts/setup_demo.sh   # vendors Aave, deploys, registers agent
-./scripts/demo.sh         # runs the scenario
+./scripts/setup_demo.sh
+./scripts/demo.sh
 ```
 
-Expected output: see scenario steps in [`scripts/demo.sh`](scripts/demo.sh).
+Expected scenario: the agent prices ETH at the live cross-venue mid; `op tamper
+uniswap --price 100000` swaps in a manipulated Uniswap reading; the next
+agent run hits the 50bps divergence threshold and calls `reportRefusal`; Aave
+borrows and liquidations revert; `op reset` clears the override; the agent
+re-prices on its next cycle.

@@ -1,8 +1,10 @@
 # Build artifacts
 target/
+**/target/
 out/
 cache/
 broadcast/
+Cargo.lock
 
 # Vendored dependencies (managed via scripts/vendor_aave.sh)
 contracts/lib/aave-v3-core/

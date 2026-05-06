@@ -1,0 +1,35 @@
+[package]
+name = "pallet-tool-override"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Theseus AI Inc"]
+description = "Demo-only pallet that overrides specific agent tool readings for the price-oracle PoC."
+
+[dependencies]
+parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
+scale-info = { version = "2.10", default-features = false, features = ["derive"] }
+
+frame-support  = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412", default-features = false }
+frame-system   = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412", default-features = false }
+sp-runtime     = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412", default-features = false }
+sp-std         = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412", default-features = false }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412" }
+sp-io   = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412" }
+
+[features]
+default = ["std"]
+std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+runtime-benchmarks = []
+try-runtime = ["frame-support/try-runtime"]
+
+[workspace]
