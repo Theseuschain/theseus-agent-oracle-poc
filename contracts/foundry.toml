@@ -1,0 +1,25 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+script = "script"
+test = "test"
+solc = "0.8.10"
+optimizer = true
+optimizer_runs = 200
+remappings = [
+    "aave-v3-core/=lib/aave-v3-core/contracts/",
+    "@aave/core-v3/=lib/aave-v3-core/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+[profile.default.fuzz]
+runs = 256
+
+[rpc_endpoints]
+theseus_local = "${THESEUS_EVM_RPC_LOCAL}"
+theseus_alpha = "${THESEUS_EVM_RPC_ALPHA}"
+
+[etherscan]
+# Theseus's block explorer config goes here once the alpha mainnet exposes one.

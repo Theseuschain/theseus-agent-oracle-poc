@@ -1,0 +1,38 @@
+[package]
+name = "op"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Theseus AI Inc"]
+description = "CLI for the Theseus Agent Oracle PoC"
+
+[[bin]]
+name = "op"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+
+# EVM-side interactions (Aave V3 on Theseus EVM)
+alloy = { version = "0.8", features = [
+    "provider-http",
+    "provider-ws",
+    "signer-local",
+    "rpc-types-eth",
+    "contract",
+    "sol-types",
+] }
+
+# Substrate/SHIP-side interactions (agent triggers, tampering, status)
+subxt = "0.37"
+subxt-signer = "0.37"
+
+# Pretty terminal output
+owo-colors = "4"
+
+[workspace]

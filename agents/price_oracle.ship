@@ -1,0 +1,165 @@
+// Price Oracle Agent for Aave V3 on Theseus EVM.
+//
+// Runs every 10 blocks (~60s @ 6s block time). Reads three venues
+// (Coinbase order book, Binance ticker, Uniswap TWAP), reconciles
+// them, and either reports a price to AgentPriceFeed.sol or refuses
+// when divergence exceeds policy.
+//
+// See PRICE_ORACLE_SOUL.md for identity.
+// See RECONCILIATION_POLICY.md for the decision rules.
+
+#[agent(name = "PriceOracle", version = 1, ship = "1.0", schedule = 10)]
+
+const MODEL_ID: bytes32 = 0xe49630ccb59348a9cbbd9989e6774e8b7340b347fbcd94da1f535fb25c15f117;
+
+const SOUL: string = include!("./PRICE_ORACLE_SOUL.md");
+const POLICY: string = include!("./RECONCILIATION_POLICY.md");
+
+// EVM address of the AgentPriceFeed contract on Theseus EVM.
+// Filled in at deploy time by scripts/deploy.sh (writes to AGENT_FEED.txt).
+const FEED_ADDRESS: address = 0x0000000000000000000000000000000000000000;
+
+// Asset we price. WETH/USD for v0.
+const ASSET_SYMBOL: string = "ETH";
+const FEED_DECIMALS: number = 8; // Chainlink convention for USD pairs.
+
+// =============================================================================
+// Types
+// =============================================================================
+
+struct VenueReading {
+    venue: string,
+    price_usd: number,
+    depth_usd: number,        // depth-weighted: $ liquidity within 50bps of mid
+    timestamp: number,
+    ok: bool,
+    error?: string
+}
+
+struct Reconciliation {
+    decision: string,         // "priced" | "refused"
+    reconciled_price: number, // 0 if refused
+    reason: string,
+    venue_readings: VenueReading[]
+}
+
+// =============================================================================
+// Tools
+// =============================================================================
+
+// Custom tools (see tools/ directory). Each fetches venue data and computes
+// an effective price + depth measurement.
+tool coinbase_orderbook(symbol: string) -> VenueReading;
+tool binance_ticker(symbol: string) -> VenueReading;
+tool uniswap_twap(pool_address: address, window_seconds: number) -> VenueReading;
+
+// EVM call precompile. Lets the agent invoke functions on contracts
+// in pallet-evm. msg.sender on the receiving side is this agent's
+// EVM-mapped address.
+tool evm_call(target: address, data: bytes, value: number) -> bytes;
+
+// =============================================================================
+// Entry
+// =============================================================================
+
+#[entry]
+node start(prompt: string) {
+    messages.push(system(SOUL));
+    messages.push(system(POLICY));
+
+    if (caller() == self.address) {
+        // Scheduled run — every 10 blocks.
+        messages.push(user(`Reconciliation cycle for ${ASSET_SYMBOL}/USD.
+
+Read all three venues using your tools:
+- coinbase_orderbook("${ASSET_SYMBOL}-USD")
+- binance_ticker("${ASSET_SYMBOL}USDT")
+- uniswap_twap(uniswap pool address, 1800)
+
+Apply RECONCILIATION_POLICY. Return a Reconciliation with decision and venue_readings.`));
+    } else if (caller() == self.owner) {
+        // Owner can force a re-read out of schedule (useful for tests).
+        messages.push(user(prompt));
+    } else {
+        raise("Only owner or scheduled trigger can invoke the oracle agent");
+    }
+
+    goto(read_venues);
+}
+
+#[model]
+node read_venues() {
+    let out = model(MODEL_ID)
+        .tools([coinbase_orderbook, binance_ticker, uniswap_twap])
+        .invoke(messages);
+
+    messages.push(out);
+
+    if (out.tool_calls) {
+        goto(handle_tool_calls);
+    } else {
+        goto(reconcile);
+    }
+}
+
+#[tool, handle_errors]
+node handle_tool_calls() {
+    let results = tools.dispatch(messages.last());
+    messages.push(results);
+    goto(read_venues);
+}
+
+#[model]
+node reconcile() {
+    // Force a structured reconciliation output.
+    messages.push(user(`Now apply RECONCILIATION_POLICY exactly:
+
+1. If fewer than 2 venues returned ok=true, decision = "refused" with reason "insufficient_venues".
+2. Compute depth-weighted median across ok venues.
+3. For each ok venue, compute relative_deviation = abs(price - median) / median.
+4. If any ok venue has relative_deviation > 0.005 (50bps), decision = "refused" with reason
+   "venue_divergence: <venue_name> off by <deviation>".
+5. Otherwise, decision = "priced", reconciled_price = depth-weighted median.
+
+Return a single JSON object matching the Reconciliation struct.`));
+
+    let out = model(MODEL_ID)
+        .response_format(Reconciliation)
+        .invoke(messages);
+
+    let result: Reconciliation = out.content;
+
+    if (result.decision == "priced") {
+        goto(report_price, result);
+    } else {
+        goto(report_refusal, result);
+    }
+}
+
+#[tool]
+node report_price(result: Reconciliation) {
+    // Convert reconciled_price (float USD) to feed-decimal int256.
+    // e.g., $3500.42 with FEED_DECIMALS=8 -> 350042000000.
+    let scaled: number = floor(result.reconciled_price * pow(10, FEED_DECIMALS));
+
+    // Encode AgentPriceFeed.reportPrice(int256)
+    // Selector: keccak256("reportPrice(int256)")[0..4] = 0x...
+    let calldata: bytes = abi.encode_call("reportPrice(int256)", [scaled]);
+
+    evm_call(FEED_ADDRESS, calldata, 0);
+
+    log(`priced: ${ASSET_SYMBOL}/USD = ${result.reconciled_price}`);
+}
+
+#[tool]
+node report_refusal(result: Reconciliation) {
+    // Hash of the reasoning blob. The full reasoning + venue readings live
+    // in TensorCommit; this hash anchors them on-chain.
+    let reason_hash: bytes32 = keccak256(serialize(result));
+
+    let calldata: bytes = abi.encode_call("reportRefusal(bytes32)", [reason_hash]);
+
+    evm_call(FEED_ADDRESS, calldata, 0);
+
+    log(`refused: ${result.reason}`);
+}

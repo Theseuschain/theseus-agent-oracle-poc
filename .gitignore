@@ -1,0 +1,29 @@
+# Build artifacts
+target/
+out/
+cache/
+broadcast/
+
+# Vendored dependencies (managed via scripts/vendor_aave.sh)
+contracts/lib/aave-v3-core/
+contracts/lib/openzeppelin-contracts/
+contracts/lib/forge-std/
+
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Local node + deployment artifacts
+.node.log
+.node.pid
+.deploy-*.log
+.configure.log
+contracts/deployments/*.txt
+!contracts/deployments/.gitkeep
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
