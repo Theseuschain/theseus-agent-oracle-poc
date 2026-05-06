@@ -72,6 +72,8 @@ A SHIP agent does. It reads Coinbase's order book, Binance's ticker, and a Unisw
 | `agents/RECONCILIATION_POLICY.md` | The decision logic the agent reasons over. |
 | `tools/` | Custom tool implementations the agent depends on (`coinbase_orderbook`, `binance_ticker`, `uniswap_twap`). |
 | `cli/` | Rust CLI: `op deposit`, `op borrow`, `op liquidate`, `op tamper`, `op status`. |
+| `pallets/tool-override/` | FRAME pallet backing `op tamper` (demo-only; do not ship to mainnet). |
+| `ui/` | Next.js demo UI: live feed, three venue cards with tamper, Aave position, decision timeline. Has a fully-working mock mode for screenshots before the chain integration lands. |
 | `scripts/` | `setup_demo.sh`, `demo.sh` — one-shot reproduction of the full scenario. |
 
 ## SHIP ↔ EVM bridge

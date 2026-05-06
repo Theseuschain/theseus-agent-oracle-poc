@@ -24,6 +24,15 @@ contracts/broadcast/
 contracts/deployments/*.txt
 !contracts/deployments/.gitkeep
 
+# UI build artifacts
+ui/node_modules/
+ui/.next/
+ui/out/
+ui/.turbo/
+ui/.env.local
+ui/.env*.local
+ui/next-env.d.ts
+
 # Editor / OS
 .DS_Store
 .idea/

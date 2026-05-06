@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0b0d;
+  --surface: #131418;
+  --surface-2: #1a1c20;
+  --border: #2a2d33;
+  --fg: #ede8dd;
+  --fg-dim: #9b9892;
+  --fg-mute: #6b6864;
+  --coral: #ff5b3a;
+  --coral-dim: #c2422a;
+  --green: #5dd39e;
+  --red: #ff4d4d;
+  --amber: #f5c451;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-fg-dim: var(--fg-dim);
+  --color-fg-mute: var(--fg-mute);
+  --color-coral: var(--coral);
+  --color-coral-dim: var(--coral-dim);
+  --color-green: var(--green);
+  --color-red: var(--red);
+  --color-amber: var(--amber);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "JetBrains Mono", "Menlo",
+    monospace;
+  --font-serif: var(--font-fraunces), "Iowan Old Style", "Georgia", serif;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dot grid backdrop, same trick as theseus.network */
+body {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+  background-position: 0 0;
+  min-height: 100vh;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "calt" 0, "liga" 0;
+}
+
+.serif {
+  font-family: var(--font-serif);
+  font-feature-settings: "ss01", "ss02";
+}
+
+/* Cards */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.surface-hover:hover {
+  border-color: rgba(255, 91, 58, 0.35);
+}
+
+/* Coral pulse for active states */
+@keyframes coral-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 91, 58, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 91, 58, 0); }
+}
+.pulse-coral { animation: coral-pulse 2s ease-in-out infinite; }
+
+/* Tabular nums for prices and sizes */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Subtle label cap-style for section headings */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+/* Status badge variants */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+}
+
+.badge-priced  { color: var(--green); border-color: rgba(93, 211, 158, 0.35); background: rgba(93, 211, 158, 0.06); }
+.badge-refused { color: var(--red);   border-color: rgba(255, 77, 77, 0.4);   background: rgba(255, 77, 77, 0.06); }
+.badge-stale   { color: var(--amber); border-color: rgba(245, 196, 81, 0.4);  background: rgba(245, 196, 81, 0.06); }
+.badge-tampered { color: var(--red); border-color: rgba(255, 77, 77, 0.4); background: rgba(255, 77, 77, 0.10); }
+
+/* Coral buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.btn:hover  { border-color: var(--coral); color: var(--coral); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--coral);
+  color: #0a0b0d;
+  border-color: var(--coral);
+  font-weight: 500;
+}
+.btn-primary:hover { background: #ff7558; border-color: #ff7558; color: #0a0b0d; }
+
+.btn-danger {
+  border-color: rgba(255, 77, 77, 0.4);
+  color: var(--red);
+}
+.btn-danger:hover { background: rgba(255, 77, 77, 0.08); border-color: var(--red); }

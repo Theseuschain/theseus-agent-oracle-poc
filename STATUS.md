@@ -18,6 +18,7 @@ What's wired vs. what still needs work to run end-to-end.
 | `tools/` Rust crate | **Buildable.** Real implementations of `coinbase_orderbook`, `binance_ticker`, `uniswap_twap`. `evm_call.rs` documents the runtime-side impl (can't be built standalone — needs `pallet-evm` dispatch). |
 | `pallets/tool-override/` | **Buildable** as a standalone FRAME pallet. Storage, four extrinsics (`override_tool`, `clear_override`, `clear_overrides`, `tick`), `Pallet::resolve()` for the tool-executor to call. |
 | `cli/` | **Compiles.** Aave-side commands use real alloy bindings. Substrate-side uses subxt's dynamic API targeting `pallet-tool-override`. |
+| `ui/` | **Buildable Next.js app.** Four panels (live feed, three venue cards with tamper, position, decision timeline). Two modes: mock (no chain required) and live (reads `AgentPriceFeed`, submits to `pallet-tool-override`). Mock mode is fully working for screenshots / decks today. |
 | `scripts/{vendor_aave,setup_demo,demo}.sh` | Complete. |
 
 ## Runtime integration steps required
