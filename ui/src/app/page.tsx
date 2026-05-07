@@ -7,6 +7,7 @@ import { PositionPanel } from "@/components/PositionPanel";
 import { DecisionTimeline } from "@/components/DecisionTimeline";
 import { ScenarioControls } from "@/components/ScenarioControls";
 import { TopBar } from "@/components/TopBar";
+import { AaveOracleJsonLd } from "@/components/JsonLd";
 import {
   FeedSnapshot,
   VenueReading,
@@ -270,6 +271,7 @@ export default function HomePage() {
 
   return (
     <>
+      <AaveOracleJsonLd />
       <TopBar mode={mode} />
       <main className="min-h-screen px-4 md:px-8 pb-12">
         <div className="max-w-7xl mx-auto pt-8">

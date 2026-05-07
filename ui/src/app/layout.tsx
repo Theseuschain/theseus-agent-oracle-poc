@@ -7,16 +7,70 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
+const SITE_URL = "https://agent-oracle.theseus.network";
+const TITLE = "Theseus Agent Oracle · Aave V3 priced by an autonomous agent";
+const DESCRIPTION =
+  "Live demo: Aave V3, unmodified, with a Theseus agent in the price-oracle slot. Reads Coinbase, Binance, and Uniswap directly, refuses to price when venues disagree, and would have caught the Mango Markets pump-the-venue exploit. Includes a Terra-shaped algorithmic stablecoin failsafe.";
+
 export const metadata: Metadata = {
-  title: "Theseus Agent Oracle",
-  description:
-    "Aave V3, unmodified. The price oracle is a Theseus agent. Tamper a venue and watch the contract refuse.",
-  metadataBase: new URL("https://theseus.network"),
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: TITLE,
+    template: "%s · Theseus Agent Oracle",
+  },
+  description: DESCRIPTION,
+  applicationName: "Theseus Agent Oracle",
+  keywords: [
+    "Theseus",
+    "Aave V3",
+    "agent oracle",
+    "AI oracle",
+    "DeFi agent",
+    "price oracle",
+    "Mango Markets",
+    "Terra Luna",
+    "algorithmic stablecoin",
+    "PolkaVM",
+    "pallet-revive",
+    "DeepSeek",
+    "autonomous agent",
+    "Proof of Agenthood",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  authors: [{ name: "Theseus", url: "https://theseus.network" }],
+  creator: "Theseus",
+  publisher: "Theseus",
+  category: "technology",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: "Theseus Agent Oracle",
-    description:
-      "Aave V3, unmodified. The price oracle is a Theseus agent. Tamper a venue and watch the contract refuse.",
     type: "website",
+    siteName: "Theseus Agent Oracle",
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    site: "@theseus_network",
+    creator: "@theseus_network",
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 

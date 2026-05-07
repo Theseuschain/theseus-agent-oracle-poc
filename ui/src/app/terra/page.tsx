@@ -6,6 +6,7 @@ import { VaultPanel } from "@/components/terra/VaultPanel";
 import { MintRedeemForm } from "@/components/terra/MintRedeemForm";
 import { TerraScenarioControls } from "@/components/terra/TerraScenarioControls";
 import { TerraTimeline } from "@/components/terra/TerraTimeline";
+import { TerraFailsafeJsonLd } from "@/components/JsonLd";
 import {
   ActionKind,
   AgentVerdict,
@@ -108,6 +109,7 @@ export default function TerraPage() {
 
   return (
     <>
+      <TerraFailsafeJsonLd />
       <TopBar mode="mock" />
       <main className="min-h-screen px-4 md:px-8 pb-12">
         <div className="max-w-7xl mx-auto pt-8">
