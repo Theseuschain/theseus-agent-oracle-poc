@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedPanel } from "@/components/FeedPanel";
 import { VenueCard } from "@/components/VenueCard";
 import { PositionPanel } from "@/components/PositionPanel";
@@ -33,6 +33,12 @@ import {
   initialScenario,
   setAgentMode,
 } from "@/lib/mock-scenario";
+import {
+  AaveScenarioAction,
+  readAaveUrl,
+  replaceUrl,
+  writeAaveUrl,
+} from "@/lib/url-state";
 
 export default function HomePage() {
   // Mode is detected once on mount via /api/feed. After that, in mock mode
@@ -41,6 +47,14 @@ export default function HomePage() {
   // tamper → poll round trip.
   const [mode, setMode] = useState<"live" | "mock">("mock");
   const [scenario, setScenario] = useState<ScenarioState>(initialScenario);
+  // Last scenario action the user (or URL) triggered. Mirrors to ?scenario=
+  // so the URL reproduces the moment.
+  const [lastScenario, setLastScenario] = useState<AaveScenarioAction | null>(
+    null,
+  );
+  // URL-supplied scenario action waiting for liveBase to populate so the
+  // override prices have something to anchor to. Cleared once applied.
+  const pendingUrlScenarioRef = useRef<AaveScenarioAction | null>(null);
 
   // Live-mode state. Only populated when the chain is reachable.
   const [liveFeed, setLiveFeed] = useState<FeedSnapshot | null>(null);
@@ -103,6 +117,21 @@ export default function HomePage() {
   const venuesStillLoading =
     mode === "mock" &&
     scenario.liveBase.every((v) => !v.ok && v.error === "loading…");
+
+  // ── URL state ─────────────────────────────────────────────────────────────
+  // Hydrate scenario + agent mode from ?scenario=…&agent=… on first paint.
+  // The scenario action runs as soon as venues are ready (otherwise overrides
+  // would write through to a referencePrice of 0).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = readAaveUrl(window.location.search);
+    if (url.agentMode === "deepseek") {
+      setScenario((s) => setAgentMode(s, "deepseek"));
+    }
+    if (url.scenario) pendingUrlScenarioRef.current = url.scenario;
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const feed = mode === "mock" ? deriveFeed(scenario) : liveFeed;
   const venues = mode === "mock" ? deriveVenues(scenario) : liveVenues;
@@ -184,6 +213,7 @@ export default function HomePage() {
       await refresh();
       return;
     }
+    setLastScenario({ kind: "tamper", venue, value: priceUsd });
     await runWithAgent((s) => applyTamper(s, venue, priceUsd));
   };
 
@@ -193,6 +223,7 @@ export default function HomePage() {
       await refresh();
       return;
     }
+    setLastScenario(null);
     await runWithAgent(applyReset);
   };
 
@@ -208,6 +239,7 @@ export default function HomePage() {
       await refresh();
       return;
     }
+    setLastScenario({ kind: "pump-all", value: priceUsd });
     await runWithAgent((s) => applyPumpAll(s, priceUsd));
   };
 
@@ -216,6 +248,7 @@ export default function HomePage() {
       console.warn("[halt] live mode not yet wired");
       return;
     }
+    setLastScenario({ kind: "halt", venue });
     await runWithAgent((s) =>
       s.halted[venue] ? applyUnhalt(s, venue) : applyHalt(s, venue),
     );
@@ -226,6 +259,7 @@ export default function HomePage() {
   // deliberately do NOT pass any framing or hint — the demo's whole point
   // is that the agent has to identify the failure mode from inputs alone.
   const handleBlackSwan = async (kind: "depth-collapse" | "subtle-pump" | "flash-crash") => {
+    setLastScenario({ kind });
     if (kind === "depth-collapse") {
       await runWithAgent((s) => applyDepthCollapse(s, 0.05));
     } else if (kind === "subtle-pump") {
@@ -238,6 +272,35 @@ export default function HomePage() {
   const handleAgentModeChange = (m: AgentMode) => {
     setScenario((s) => setAgentMode(s, m));
   };
+
+  // Mirror state to URL whenever the scenario action or agent mode changes.
+  // No-op in live mode (URL is for shareable mock states).
+  useEffect(() => {
+    if (mode !== "mock") return;
+    replaceUrl(
+      writeAaveUrl({
+        scenario: lastScenario ?? undefined,
+        agentMode: scenario.agentMode,
+      }),
+    );
+  }, [lastScenario, scenario.agentMode, mode]);
+
+  // Apply pending URL scenario once venues are loaded. Single-shot — clears
+  // the ref after apply.
+  useEffect(() => {
+    if (mode !== "mock") return;
+    if (venuesStillLoading) return;
+    const pending = pendingUrlScenarioRef.current;
+    if (!pending) return;
+    pendingUrlScenarioRef.current = null;
+    if (pending.kind === "pump-all") handlePumpAll(pending.value);
+    else if (pending.kind === "halt") handleHaltToggle(pending.venue);
+    else if (pending.kind === "tamper") handleTamper(pending.venue, pending.value);
+    else if (pending.kind === "depth-collapse") handleBlackSwan("depth-collapse");
+    else if (pending.kind === "subtle-pump") handleBlackSwan("subtle-pump");
+    else if (pending.kind === "flash-crash") handleBlackSwan("flash-crash");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venuesStillLoading, mode]);
 
   const handleAction = async (
     action: "deposit" | "borrow" | "repay" | "withdraw",
@@ -273,8 +336,8 @@ export default function HomePage() {
     <>
       <AaveOracleJsonLd />
       <TopBar mode={mode} />
-      <main className="min-h-screen px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-8">
+      <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
+        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
         <Header />
 
         <div className="mb-4">
@@ -330,6 +393,7 @@ export default function HomePage() {
           <DecisionTimeline
             entries={timeline}
             loading={!timeline.length && (mode === "live" || venuesStillLoading)}
+            pending={mode === "mock" && scenario.pending}
           />
         </div>
 
@@ -356,10 +420,10 @@ export default function HomePage() {
 
 function Header() {
   return (
-    <header className="mb-8 md:mb-10">
+    <header className="mb-6 sm:mb-8 md:mb-10">
       <div className="eyebrow mb-2">Live demo</div>
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
-        <h1 className="serif text-3xl md:text-4xl tracking-tight">
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight">
           Theseus Agent Oracle
         </h1>
         <a

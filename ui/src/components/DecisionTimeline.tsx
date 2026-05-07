@@ -2,17 +2,22 @@
 
 import { useState } from "react";
 import { TimelineEntry, AgentInspect, VenueReading } from "@/lib/types";
+import { aaveCounterfactual } from "@/lib/counterfactual";
 import { formatBlock, formatHash, formatUsd } from "@/lib/format";
-import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog } from "lucide-react";
+import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog, Loader2 } from "lucide-react";
+import { CounterfactualBadge } from "./CounterfactualBadge";
 
 interface Props {
   entries: TimelineEntry[];
   loading?: boolean;
+  /** True while a DeepSeek call is in flight; the head row gets a
+   *  "thinking" treatment until the verdict is replaced. */
+  pending?: boolean;
 }
 
-export function DecisionTimeline({ entries, loading }: Props) {
+export function DecisionTimeline({ entries, loading, pending }: Props) {
   return (
-    <div className="surface p-6">
+    <div className="surface p-4 sm:p-6">
       <div className="flex items-center justify-between mb-5">
         <div className="serif text-lg">Agent timeline</div>
         {entries.length > 0 && (
@@ -26,9 +31,8 @@ export function DecisionTimeline({ entries, loading }: Props) {
         <SkeletonList />
       ) : entries.length === 0 ? (
         <div className="text-fg-dim text-sm py-8 text-center max-w-md mx-auto leading-relaxed">
-          Try a manipulation lever above. The agent&apos;s verdict and reasoning
-          will show up here, with an inspect panel for the full prompt and raw
-          response.
+          Try a manipulation lever above. The agent&apos;s verdict, reasoning,
+          and the counterfactual outcome will show up here.
         </div>
       ) : (
         <ol className="divide-y divide-border">
@@ -36,7 +40,9 @@ export function DecisionTimeline({ entries, loading }: Props) {
             <TimelineRow
               key={`${e.block}-${i}`}
               entry={e}
-              defaultReasoningOpen={i === 0 && e.decision === "REFUSED"}
+              defaultReasoningOpen={false}
+              isHead={i === 0}
+              pending={!!pending && i === 0}
             />
           ))}
         </ol>
@@ -45,23 +51,58 @@ export function DecisionTimeline({ entries, loading }: Props) {
   );
 }
 
+/** Pulls the most informative single sentence from a multi-sentence
+ *  reasoning paragraph. Prefers the first one that names a specific
+ *  signal; falls back to first sentence. */
+function reasoningOneLiner(reasoning: string | undefined): string | undefined {
+  if (!reasoning) return undefined;
+  // Split on sentence boundaries, keeping the trailing punctuation. The
+  // first sentence almost always carries the cause of the verdict.
+  const parts = reasoning.split(/(?<=[.!?])\s+/);
+  if (parts.length === 0) return undefined;
+  const first = parts[0].trim();
+  // Some reasonings start with "You decide PRICED or REFUSED." style
+  // boilerplate; skip past that.
+  if (first.length < 40 && parts.length > 1) {
+    return parts.slice(0, 2).join(" ").trim();
+  }
+  return first;
+}
+
 function TimelineRow({
   entry: e,
   defaultReasoningOpen,
+  isHead,
+  pending,
 }: {
   entry: TimelineEntry;
   defaultReasoningOpen: boolean;
+  isHead: boolean;
+  pending: boolean;
 }) {
   const [reasoningOpen, setReasoningOpen] = useState(defaultReasoningOpen);
   const [inspectOpen, setInspectOpen] = useState(false);
   const hasReasoning = !!e.reasoning;
   const hasInspect = !!e.inspect;
+  const oneLiner = reasoningOneLiner(e.reasoning);
+
+  // Counterfactual: if we have an inspect snapshot we can compute it.
+  const cf = e.inspect
+    ? aaveCounterfactual(
+        e.inspect.venues,
+        e.inspect.referencePrice,
+        e.decision,
+        e.priceUsd,
+      )
+    : null;
 
   return (
     <li className="py-3">
       <div className="flex items-start gap-3">
         <div className="pt-0.5">
-          {e.decision === "REFUSED" ? (
+          {pending ? (
+            <Loader2 size={14} className="text-coral animate-spin" />
+          ) : e.decision === "REFUSED" ? (
             <CircleX size={14} className="text-red" />
           ) : (
             <CircleCheck size={14} className="text-green" />
@@ -80,10 +121,15 @@ function TimelineRow({
               {e.decision === "REFUSED" ? "refused" : "priced"}
             </span>
             {e.inspect && <AgentTag agent={e.inspect.agent} />}
+            {pending && (
+              <span className="mono text-[10px] text-coral pulse-coral rounded-full px-1.5 py-0.5 border border-coral/40">
+                agent reasoning…
+              </span>
+            )}
           </div>
-          <div className="mono text-sm text-fg mt-0.5 tnum truncate">
+          <div className="mono text-sm text-fg mt-0.5 tnum">
             {e.decision === "REFUSED" ? (
-              <span className="text-fg-dim">{e.reason ?? "venue divergence"}</span>
+              <span className="text-fg-dim break-words">{e.reason ?? "venue divergence"}</span>
             ) : (
               <>
                 {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "—"}
@@ -95,7 +141,20 @@ function TimelineRow({
               </>
             )}
           </div>
-          <div className="flex items-baseline gap-3 mt-0.5 flex-wrap">
+          {oneLiner && (
+            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
+              &ldquo;{oneLiner}&rdquo;
+            </div>
+          )}
+          {cf && (
+            <CounterfactualBadge
+              altLabel="venue-quorum oracle (Chainlink shape)"
+              summary={cf.costSummary}
+              severity={cf.severity}
+              divergesFromAgent={cf.divergesFromAgent}
+            />
+          )}
+          <div className="flex items-baseline gap-3 mt-2 flex-wrap">
             {e.reasonHash && (
               <span className="mono text-[10px] text-fg-mute">
                 {formatHash(e.reasonHash, 6, 6)}
@@ -107,7 +166,7 @@ function TimelineRow({
                 onClick={() => setReasoningOpen((o) => !o)}
               >
                 {reasoningOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                agent reasoning
+                full reasoning
               </button>
             )}
             {hasInspect && (
@@ -121,7 +180,7 @@ function TimelineRow({
             )}
           </div>
           {hasReasoning && reasoningOpen && (
-            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap">
+            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap break-words">
               {e.reasoning}
             </div>
           )}

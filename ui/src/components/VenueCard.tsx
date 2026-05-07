@@ -40,7 +40,7 @@ export function VenueCard({ reading, onTamper, onReset, loading }: Props) {
 
   return (
     <div
-      className={`surface p-6 ${isTampered || isHalted ? "border-red/40" : "surface-hover"}`}
+      className={`surface p-4 sm:p-6 ${isTampered || isHalted ? "border-red/40" : "surface-hover"}`}
       style={isTampered || isHalted ? { borderColor: "rgba(255,77,77,0.45)" } : undefined}
     >
       <div className="flex items-start justify-between gap-3 mb-4">

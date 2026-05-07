@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Zap, ZapOff, Power, Brain, Cog, Activity, TrendingDown, FlaskConical } from "lucide-react";
 import { VenueReading } from "@/lib/types";
 import { AgentMode } from "@/lib/mock-scenario";
+import { ShareLinkButton } from "./ShareLinkButton";
 
 type Venue = VenueReading["venue"];
 
@@ -55,7 +56,7 @@ export function ScenarioControls({
   };
 
   return (
-    <div className="surface p-5 mb-4">
+    <div className="surface p-4 sm:p-5 mb-4">
       {/* Header row: title + agent mode toggle + reset */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="eyebrow">Demo levers</div>
@@ -81,6 +82,7 @@ export function ScenarioControls({
               label="Rules"
             />
           </div>
+          <ShareLinkButton disabled={disabled} />
           {dirty && (
             <button className="btn" onClick={() => wrap(onResetAll)} disabled={disabled}>
               Reset

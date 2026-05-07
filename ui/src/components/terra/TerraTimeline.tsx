@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog } from "lucide-react";
+import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog, Loader2 } from "lucide-react";
 import { TimelineEntry } from "@/lib/terra-scenario";
+import { terraCounterfactual } from "@/lib/counterfactual";
+import { CounterfactualBadge } from "../CounterfactualBadge";
 
 interface Props {
   entries: TimelineEntry[];
+  /** True while the agent is reasoning over the head action. */
+  pending?: boolean;
 }
 
-export function TerraTimeline({ entries }: Props) {
+export function TerraTimeline({ entries, pending }: Props) {
   return (
-    <div className="surface p-6 lg:col-span-3">
+    <div className="surface p-4 sm:p-6 lg:col-span-3">
       <div className="flex items-center justify-between mb-5">
         <div>
           <div className="eyebrow mb-1">Failsafe verdicts</div>
@@ -24,13 +28,19 @@ export function TerraTimeline({ entries }: Props) {
       {entries.length === 0 ? (
         <div className="text-fg-dim text-sm py-8 text-center max-w-md mx-auto leading-relaxed">
           Load a vault state above and click <span className="text-fg">Mint</span> or{" "}
-          <span className="text-fg">Redeem</span>. The agent&apos;s verdict and
-          reasoning will land here.
+          <span className="text-fg">Redeem</span>. The agent&apos;s verdict, the
+          one-line reasoning, and what would have happened without it will land
+          here.
         </div>
       ) : (
         <ol className="divide-y divide-border">
           {entries.map((e, i) => (
-            <Row key={`${e.block}-${i}`} entry={e} defaultOpen={i === 0} />
+            <Row
+              key={`${e.block}-${i}`}
+              entry={e}
+              defaultOpen={false}
+              pending={!!pending && i === 0}
+            />
           ))}
         </ol>
       )}
@@ -38,18 +48,37 @@ export function TerraTimeline({ entries }: Props) {
   );
 }
 
-function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolean }) {
+function reasoningOneLiner(reasoning: string): string | undefined {
+  const parts = reasoning.split(/(?<=[.!?])\s+/);
+  if (parts.length === 0) return undefined;
+  const first = parts[0].trim();
+  if (first.length < 40 && parts.length > 1) {
+    return parts.slice(0, 2).join(" ").trim();
+  }
+  return first;
+}
+
+function Row({ entry, defaultOpen, pending }: { entry: TimelineEntry; defaultOpen: boolean; pending: boolean }) {
   const [reasoningOpen, setReasoningOpen] = useState(defaultOpen);
   const [inspectOpen, setInspectOpen] = useState(false);
 
   const allowed = entry.verdict.decision === "ALLOW";
   const isAgent = entry.verdict.agent === "deepseek";
+  const oneLiner = reasoningOneLiner(entry.verdict.reasoning);
+  const cf = terraCounterfactual(
+    entry.vaultSnapshot,
+    entry.action,
+    entry.ustdAmount,
+    entry.verdict,
+  );
 
   return (
     <li className="py-3">
       <div className="flex items-start gap-3">
         <div className="pt-0.5">
-          {allowed ? (
+          {pending ? (
+            <Loader2 size={14} className="text-coral animate-spin" />
+          ) : allowed ? (
             <CircleCheck size={14} className="text-green" />
           ) : (
             <CircleX size={14} className="text-red" />
@@ -81,15 +110,31 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
             {entry.scenarioLabel && (
               <span className="mono text-[10px] text-fg-mute">· {entry.scenarioLabel}</span>
             )}
+            {pending && (
+              <span className="mono text-[10px] text-coral pulse-coral rounded-full px-1.5 py-0.5 border border-coral/40">
+                agent reasoning…
+              </span>
+            )}
           </div>
-          <div className="mono text-sm text-fg-dim mt-0.5">{entry.verdict.reason}</div>
-          <div className="flex items-baseline gap-3 mt-0.5 flex-wrap">
+          <div className="mono text-sm text-fg-dim mt-0.5 break-words">{entry.verdict.reason}</div>
+          {oneLiner && (
+            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
+              &ldquo;{oneLiner}&rdquo;
+            </div>
+          )}
+          <CounterfactualBadge
+            altLabel="naive contract (no failsafe)"
+            summary={cf.costSummary}
+            severity={cf.severity}
+            divergesFromAgent={cf.divergesFromAgent}
+          />
+          <div className="flex items-baseline gap-3 mt-2 flex-wrap">
             <button
               className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
               onClick={() => setReasoningOpen((o) => !o)}
             >
               {reasoningOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-              agent reasoning
+              full reasoning
             </button>
             {(entry.verdict.prompt || entry.vaultSnapshot) && (
               <button
@@ -102,7 +147,7 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
             )}
           </div>
           {reasoningOpen && (
-            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap">
+            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap break-words">
               {entry.verdict.reasoning}
             </div>
           )}

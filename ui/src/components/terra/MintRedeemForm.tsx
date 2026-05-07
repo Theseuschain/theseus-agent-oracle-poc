@@ -17,7 +17,7 @@ export function MintRedeemForm({ busy, pending, onSubmit }: Props) {
   const disabled = busy || pending;
 
   return (
-    <div className="surface p-6">
+    <div className="surface p-4 sm:p-6">
       <div className="eyebrow mb-3">Action</div>
 
       <div className="grid grid-cols-2 gap-1 mb-4 p-1 rounded-[10px] bg-surface-2 border border-border">

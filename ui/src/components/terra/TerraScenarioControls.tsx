@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Brain, Cog, FastForward, RotateCcw } from "lucide-react";
 import { PRESETS } from "@/lib/terra-scenario";
+import { ShareLinkButton } from "../ShareLinkButton";
 
 type AgentMode = "rule" | "deepseek";
 
@@ -38,7 +39,7 @@ export function TerraScenarioControls({
   };
 
   return (
-    <div className="surface p-5 mb-4">
+    <div className="surface p-4 sm:p-5 mb-4">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="eyebrow">Demo levers</div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -63,6 +64,7 @@ export function TerraScenarioControls({
               label="Rules"
             />
           </div>
+          <ShareLinkButton disabled={disabled} />
           <button
             className="btn"
             onClick={() => wrap(onReset)}

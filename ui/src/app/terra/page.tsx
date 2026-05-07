@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { VaultPanel } from "@/components/terra/VaultPanel";
 import { MintRedeemForm } from "@/components/terra/MintRedeemForm";
@@ -19,12 +19,44 @@ import {
   setTerraAgentMode,
   setTerraPending,
 } from "@/lib/terra-scenario";
+import {
+  readTerraUrl,
+  replaceUrl,
+  TerraPreset,
+  writeTerraUrl,
+} from "@/lib/url-state";
 
 type AgentMode = "rule" | "deepseek";
 
 export default function TerraPage() {
   const [scenario, setScenario] = useState<TerraScenarioState>(initialTerraScenario);
   const [busy, setBusy] = useState(false);
+  // Map the preset key the user last loaded so we can mirror to URL.
+  const [presetKey, setPresetKey] = useState<TerraPreset | null>(null);
+
+  // Hydrate from ?preset=…&agent=… on mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = readTerraUrl(window.location.search);
+    if (url.agentMode === "deepseek") {
+      setScenario((s) => setTerraAgentMode(s, "deepseek"));
+    }
+    if (url.preset) {
+      setPresetKey(url.preset);
+      setScenario((s) => applyPreset(s, url.preset!));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mirror to URL whenever preset or agent mode changes.
+  useEffect(() => {
+    replaceUrl(
+      writeTerraUrl({
+        preset: presetKey ?? undefined,
+        agentMode: scenario.agentMode,
+      }),
+    );
+  }, [presetKey, scenario.agentMode]);
 
   const handleAction = useCallback(
     async (action: ActionKind, ustdAmount: number) => {
@@ -96,10 +128,12 @@ export default function TerraPage() {
   );
 
   const handlePreset = useCallback((key: keyof typeof PRESETS) => {
+    setPresetKey(key as TerraPreset);
     setScenario((s) => applyPreset(s, key));
   }, []);
 
   const handleReset = useCallback(() => {
+    setPresetKey(null);
     setScenario(initialTerraScenario());
   }, []);
 
@@ -111,8 +145,8 @@ export default function TerraPage() {
     <>
       <TerraFailsafeJsonLd />
       <TopBar mode="mock" />
-      <main className="min-h-screen px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-8">
+      <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
+        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
           <Header />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
@@ -134,7 +168,7 @@ export default function TerraPage() {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <TerraTimeline entries={scenario.events} />
+            <TerraTimeline entries={scenario.events} pending={scenario.pending} />
           </div>
 
           <Footer />
@@ -146,10 +180,10 @@ export default function TerraPage() {
 
 function Header() {
   return (
-    <header className="mb-8 md:mb-10">
+    <header className="mb-6 sm:mb-8 md:mb-10">
       <div className="eyebrow mb-2">Live demo</div>
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
-        <h1 className="serif text-3xl md:text-4xl tracking-tight">
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight">
           Terra Failsafe Agent
         </h1>
         <a

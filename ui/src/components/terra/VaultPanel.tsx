@@ -17,7 +17,7 @@ export function VaultPanel({ vault, presetLabel }: Props) {
   const reserveHealth = healthLevel(0.4 - vault.reserveCoverage, [0.0, 0.2]); // inverted
 
   return (
-    <div className="surface p-6 lg:col-span-2">
+    <div className="surface p-4 sm:p-6 lg:col-span-2">
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <div className="eyebrow mb-1">USTD vault</div>
