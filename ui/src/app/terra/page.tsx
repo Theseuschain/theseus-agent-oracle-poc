@@ -146,14 +146,34 @@ function Header() {
   return (
     <header className="mb-8 md:mb-10">
       <div className="eyebrow mb-2">Live demo</div>
-      <h1 className="serif text-3xl md:text-4xl tracking-tight mb-2">
-        Terra Failsafe Agent
-      </h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+        <h1 className="serif text-3xl md:text-4xl tracking-tight">
+          Terra Failsafe Agent
+        </h1>
+        <a
+          href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-[8px] border border-coral/40 bg-coral/5 text-coral hover:bg-coral/10 transition"
+        >
+          Agent&apos;s PoA profile ↗
+        </a>
+      </div>
       <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
         An algorithmic stablecoin (USTD/LUND) with one architectural change
         from Terra: an agent gates every mint and redeem. The protocol calls
         the agent <em>before</em> executing; the agent allows or refuses based
-        on the vault&apos;s current health.
+        on the vault&apos;s current health. Every verdict carries the full
+        context the model saw, signed and committed under{" "}
+        <a
+          href="https://theseus.network/poa"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-coral hover:underline"
+        >
+          Proof of Agenthood
+        </a>
+        .
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>

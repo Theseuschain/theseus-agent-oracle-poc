@@ -356,15 +356,35 @@ function Header() {
   return (
     <header className="mb-8 md:mb-10">
       <div className="eyebrow mb-2">Live demo</div>
-      <h1 className="serif text-3xl md:text-4xl tracking-tight mb-2">
-        Theseus Agent Oracle
-      </h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+        <h1 className="serif text-3xl md:text-4xl tracking-tight">
+          Theseus Agent Oracle
+        </h1>
+        <a
+          href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-[8px] border border-coral/40 bg-coral/5 text-coral hover:bg-coral/10 transition"
+        >
+          Agent&apos;s PoA profile ↗
+        </a>
+      </div>
       <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
         Real ETH/USD prices from Coinbase, Binance, and Uniswap V3. An agent
         reads all three, decides whether to price or refuse, and writes the
         result to a Solidity contract that Aave V3 reads through. Try a
         manipulation in the panel below; the agent&apos;s verdict and reasoning
-        show up in the timeline.
+        show up in the timeline. Every decision the agent makes carries the
+        full context the model saw, signed and committed under{" "}
+        <a
+          href="https://theseus.network/poa"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-coral hover:underline"
+        >
+          Proof of Agenthood
+        </a>
+        .
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>

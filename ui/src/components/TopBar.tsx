@@ -40,6 +40,15 @@ export function TopBar({ mode }: Props) {
             {mode === "live" ? "live chain" : "mock data"}
           </span>
           <a
+            href="https://theseus.network/poa/agents"
+            className="mono text-[11px] text-fg-dim hover:text-fg hidden md:inline"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Browse agents on Proof of Agenthood"
+          >
+            PoA
+          </a>
+          <a
             href="https://theseus.network/docs"
             className="mono text-[11px] text-fg-dim hover:text-fg hidden md:inline"
             target="_blank"
