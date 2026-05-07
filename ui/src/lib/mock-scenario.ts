@@ -1,13 +1,13 @@
 /**
  * Client-side mock scenario state.
  *
- * Owned by the browser (Vercel's serverless functions don't share in-memory
- * state across instances; in-memory globals on the server can't survive a
- * tamper → poll cycle).
+ * The display values for the three venues come from real exchange APIs
+ * (Coinbase order book, Binance ticker, Uniswap V3 mainnet pool — see
+ * /api/venues). Tamper / halt overrides are layered on top in React state.
  *
  * Three demo paths, each producing a structurally distinct refusal:
  *
- * 1. Tamper one venue (existing) → numerical divergence between the venues.
+ * 1. Tamper one venue → numerical divergence between the venues.
  *    A 200-line Solidity contract with three Chainlink feeds could catch this.
  *
  * 2. Pump *all* venues to the same manipulated price → no numerical divergence,
@@ -16,8 +16,7 @@
  *    catch it because the quorum agrees.
  *
  * 3. Halt a venue → agent recognizes the venue as stale via off-chain
- *    context (a status-page or news event). A contract has no API for this:
- *    if the oracle keeps reporting the last value, the contract believes it.
+ *    context (a status-page or news event). A contract has no API for this.
  */
 
 import {
@@ -35,6 +34,14 @@ export interface ScenarioState {
   overrides: Partial<Record<Venue, number>>;
   /** Venues marked stale by an injected halt event. */
   halted: Partial<Record<Venue, true>>;
+  /** Most recent live readings from /api/venues. Used as the base values
+   *  the venue cards display when no override / halt is active. */
+  liveBase: VenueReading[];
+  /** Reference price the agent uses to detect "extreme baseline deviation"
+   *  (the Mango shape). Snapshotted from the depth-weighted median of
+   *  liveBase the moment any override / halt becomes active, so the demo's
+   *  comparison is against the price the chain saw before manipulation. */
+  referencePrice: number;
   position: UserPosition;
   /** Block height ticks every scenario action so "block N" advances. */
   blockOffset: number;
@@ -42,9 +49,17 @@ export interface ScenarioState {
   events: TimelineEntry[];
 }
 
+const DEFAULT_BASE: VenueReading[] = [
+  { venue: "coinbase", priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0, error: "loading…" },
+  { venue: "binance",  priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0, error: "loading…" },
+  { venue: "uniswap",  priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0, error: "loading…" },
+];
+
 export const initialScenario = (): ScenarioState => ({
   overrides: {},
   halted: {},
+  liveBase: DEFAULT_BASE,
+  referencePrice: 0, // populated on first /api/venues poll
   blockOffset: 0,
   events: [],
   position: {
@@ -57,7 +72,6 @@ export const initialScenario = (): ScenarioState => ({
   },
 });
 
-const REFERENCE_PRICE = 3502.4;
 const PRICED_HASH = `0x${"0".repeat(64)}`;
 const REFUSED_HASH_DIVERGENCE =
   "0x8a3f7b2c4d5e6f819203a4b5c6d7e8f90123456789abcdef0123456789abcdef";
@@ -65,14 +79,6 @@ const REFUSED_HASH_EXITABILITY =
   "0xb7e2c9f1a4d6e8093215c4d7e8f901234abcdef56789012345678901234abcdef";
 const REFUSED_HASH_HALT =
   "0xc1d4e7a0b3f6c8092145c7d8e9f01234567890abcdef0123456789abcdef0123";
-
-const SEED_TIMELINE: Omit<TimelineEntry, "block">[] = [
-  { decision: "PRICED", priceUsd: 3502.41, maxDeviationBps: 12 },
-  { decision: "PRICED", priceUsd: 3499.07, maxDeviationBps: 8 },
-  { decision: "PRICED", priceUsd: 3495.22, maxDeviationBps: 15 },
-  { decision: "PRICED", priceUsd: 3498.10, maxDeviationBps: 6 },
-  { decision: "PRICED", priceUsd: 3501.94, maxDeviationBps: 11 },
-];
 
 const VENUE_LABEL: Record<Venue, string> = {
   coinbase: "Coinbase",
@@ -88,37 +94,30 @@ function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-const BASE_DEPTH: Record<Venue, number> = {
-  coinbase: 48_200_000,
-  binance:  1_500_000_000,
-  uniswap:  215_000_000,
-};
-
-const BASE_PRICE: Record<Venue, number> = {
-  coinbase: 3502.40,
-  binance:  3502.51,
-  uniswap:  3498.12,
-};
-
-const BASE_AGE: Record<Venue, number> = {
-  coinbase: 4,
-  binance:  8,
-  uniswap:  14,
-};
+function depthWeightedMedian(readings: VenueReading[]): number {
+  const valid = readings.filter((r) => r.ok && r.depthUsd > 0);
+  if (valid.length === 0) return 0;
+  const total = valid.reduce((s, r) => s + r.depthUsd, 0);
+  return valid.reduce((s, r) => s + (r.priceUsd * r.depthUsd) / total, 0);
+}
 
 export function deriveVenues(state: ScenarioState): VenueReading[] {
-  return (Object.keys(BASE_PRICE) as Venue[]).map((v) => {
+  return state.liveBase.map((base) => {
+    const v = base.venue;
     const halted = !!state.halted[v];
     const override = state.overrides[v];
-    return {
-      venue: v,
-      priceUsd: override ?? BASE_PRICE[v],
-      depthUsd: BASE_DEPTH[v],
-      ok: !halted,
-      ageSeconds: halted ? Math.max(BASE_AGE[v], 60) : BASE_AGE[v],
-      tampered: override !== undefined,
-      ...(halted ? { error: "halted: trading suspended" } : {}),
-    };
+    if (halted) {
+      return {
+        ...base,
+        ok: false,
+        error: "halted: trading suspended",
+        ageSeconds: Math.max(base.ageSeconds, 60),
+      };
+    }
+    if (override !== undefined) {
+      return { ...base, priceUsd: override, ok: true, tampered: true, error: undefined };
+    }
+    return base;
   });
 }
 
@@ -133,7 +132,7 @@ interface RefusalAnalysis {
 
 /**
  * The agent's reconciliation policy. Three rules, in order. Each fires with
- * a structurally different reasoning paragraph — that's the whole point.
+ * a structurally different reasoning paragraph.
  */
 export function analyze(state: ScenarioState): RefusalAnalysis {
   const venues = deriveVenues(state);
@@ -156,34 +155,37 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
     };
   }
 
-  // Compute the depth-weighted median across active venues.
-  const totalDepth = valid.reduce((s, v) => s + v.depthUsd, 0);
-  const median = valid.reduce((s, v) => s + (v.priceUsd * v.depthUsd) / totalDepth, 0);
+  const median = depthWeightedMedian(valid);
 
   // Rule 2 — exitability / extreme baseline deviation (Mango shape).
-  // Fires when prices have moved >50% from the historical reference even if
-  // the active venues all agree. The Mango exploit pumped every input venue
-  // simultaneously; numerical divergence rules saw nothing.
-  const baselineDeviation = Math.abs(median - REFERENCE_PRICE) / REFERENCE_PRICE;
-  if (baselineDeviation > 0.5) {
-    const moveX = (median / REFERENCE_PRICE).toFixed(1);
-    const reportedDepth = (totalDepth / 1e9).toFixed(2);
-    return {
-      decision: "REFUSED",
-      reason: `exitability: ${moveX}x move with insufficient real depth`,
-      reasonHash: REFUSED_HASH_EXITABILITY,
-      reasoning: [
-        `All ${valid.length} active venues report ~$${median.toFixed(0)} — they all moved together to the same level (zero numerical divergence between feeds).`,
-        `A naïve venue-quorum oracle would price this.`,
-        `But cumulative depth across these venues is $${reportedDepth}B, unchanged from the pre-move baseline. Real liquidity doesn't materialize at synthetic prices — if a $100M position were liquidated at $${median.toFixed(0)}, it would clear the entire visible book.`,
-        `This pattern matches Mango Markets (Oct 2022, $116M) and Bybit MNGO (2023): a coordinated mark-pump where every reporting venue was the same shallow pool.`,
-        `A smart contract reading three Chainlink feeds that all agree has no rule to fire here. Refusing.`,
-      ].join(" "),
-      reportedPrice: median,
-    };
+  // Compare to the cached referencePrice (snapshotted before any tamper).
+  // If reference is 0 (haven't polled yet), skip this rule.
+  if (state.referencePrice > 0) {
+    const baselineDeviation = Math.abs(median - state.referencePrice) / state.referencePrice;
+    if (baselineDeviation > 0.5) {
+      const moveX = (median / state.referencePrice).toFixed(1);
+      const totalDepth = valid.reduce((s, v) => s + v.depthUsd, 0);
+      const reportedDepthFmt =
+        totalDepth >= 1e9 ? `$${(totalDepth / 1e9).toFixed(2)}B`
+        : totalDepth >= 1e6 ? `$${(totalDepth / 1e6).toFixed(1)}M`
+        : `$${totalDepth.toFixed(0)}`;
+      return {
+        decision: "REFUSED",
+        reason: `exitability: ${moveX}x move with insufficient real depth`,
+        reasonHash: REFUSED_HASH_EXITABILITY,
+        reasoning: [
+          `All ${valid.length} active venues report ~$${median.toFixed(0)} — they all moved together to the same level (zero numerical divergence between feeds).`,
+          `A naïve venue-quorum oracle would price this.`,
+          `But cumulative depth across these venues is ${reportedDepthFmt}, unchanged from the pre-move baseline (~$${state.referencePrice.toFixed(0)}). Real liquidity doesn't materialize at synthetic prices — if a $100M position were liquidated at $${median.toFixed(0)}, it would clear the entire visible book.`,
+          `This pattern matches Mango Markets (Oct 2022, $116M) and Bybit MNGO (2023): a coordinated mark-pump where every reporting venue was the same shallow pool.`,
+          `A smart contract reading three Chainlink feeds that all agree has no rule to fire here. Refusing.`,
+        ].join(" "),
+        reportedPrice: median,
+      };
+    }
   }
 
-  // Rule 3 — numerical divergence (existing single-venue tamper).
+  // Rule 3 — numerical divergence (single-venue tamper).
   let maxDev = 0;
   let worst: VenueReading | null = null;
   for (const v of valid) {
@@ -241,7 +243,7 @@ export function deriveFeed(state: ScenarioState): FeedSnapshot {
   }
   return {
     decision: "PRICED",
-    priceUsd: a.reportedPrice ?? 3502.41,
+    priceUsd: a.reportedPrice ?? 0,
     updatedAt: nowSec() - 12,
     block,
     reasonHash: PRICED_HASH,
@@ -250,13 +252,18 @@ export function deriveFeed(state: ScenarioState): FeedSnapshot {
 }
 
 export function deriveTimeline(state: ScenarioState): TimelineEntry[] {
+  // Start from the user's own decisions (newest first), then synthesize a
+  // few "priced" entries from the cached reference so the timeline feels
+  // populated even on first load.
   const block = currentBlock(state.blockOffset);
-  const seed: TimelineEntry[] = SEED_TIMELINE.map((entry, i) => ({
-    ...entry,
-    block: block - (i + 1) * 10,
-    reasoning: `3 venues reconciled to within ${entry.maxDeviationBps}bps of depth-weighted median.`,
-  }));
-  return [...state.events, ...seed].slice(0, 20);
+  const seedFromReference: TimelineEntry[] = state.referencePrice > 0
+    ? [
+        { block: block - 10, decision: "PRICED", priceUsd: state.referencePrice * 0.9999, maxDeviationBps: 9, reasoning: `3 venues reconciled to within 9bps of $${state.referencePrice.toFixed(2)}.` },
+        { block: block - 20, decision: "PRICED", priceUsd: state.referencePrice * 1.0001, maxDeviationBps: 11, reasoning: `3 venues reconciled to within 11bps.` },
+        { block: block - 30, decision: "PRICED", priceUsd: state.referencePrice * 0.9997, maxDeviationBps: 7, reasoning: `3 venues reconciled to within 7bps.` },
+      ]
+    : [];
+  return [...state.events, ...seedFromReference].slice(0, 20);
 }
 
 function recordEvent(state: ScenarioState): TimelineEntry {
@@ -270,6 +277,29 @@ function recordEvent(state: ScenarioState): TimelineEntry {
     reason: a.reason,
     reasonHash: a.reasonHash,
     reasoning: a.reasoning,
+  };
+}
+
+/**
+ * Update the cached live readings from a fresh /api/venues response.
+ * Snapshots the reference price the first time we see clean readings; after
+ * that, only updates the reference when there are no overrides/halts active
+ * (so the Mango-shape comparison stays anchored to the pre-tamper price).
+ */
+export function applyLiveReadings(
+  state: ScenarioState,
+  liveBase: VenueReading[],
+): ScenarioState {
+  const dirty =
+    Object.keys(state.overrides).length > 0 || Object.keys(state.halted).length > 0;
+  const validBase = liveBase.filter((r) => r.ok);
+  const newReference = validBase.length >= 2
+    ? depthWeightedMedian(validBase)
+    : state.referencePrice;
+  return {
+    ...state,
+    liveBase,
+    referencePrice: dirty ? state.referencePrice : newReference,
   };
 }
 
@@ -334,7 +364,7 @@ export function applyPositionAction(
   amount: number,
 ): ScenarioState {
   const a = analyze(state);
-  const lastPrice = a.reportedPrice ?? 3502.41;
+  const lastPrice = a.reportedPrice ?? state.referencePrice;
   const p = { ...state.position };
 
   if (action === "deposit") p.collateralWeth += amount;

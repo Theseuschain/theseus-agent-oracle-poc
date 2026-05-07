@@ -15,6 +15,7 @@ import {
 import {
   ScenarioState,
   applyHalt,
+  applyLiveReadings,
   applyPositionAction,
   applyPumpAll,
   applyReset,
@@ -70,6 +71,27 @@ export default function HomePage() {
     const id = setInterval(refresh, 4000);
     return () => clearInterval(id);
   }, [mode, refresh]);
+
+  // Real venue prices come from /api/venues regardless of mode (mock or live).
+  // The agent in production reads the same APIs; the UI here gives an honest
+  // preview. Tamper / halt overlays sit on top of these readings.
+  const refreshVenues = useCallback(async () => {
+    try {
+      const res = await fetch("/api/venues", { cache: "no-store" }).then((r) => r.json());
+      if (Array.isArray(res.venues)) {
+        setScenario((s) => applyLiveReadings(s, res.venues));
+      }
+    } catch (e) {
+      // Network/host failure — keep whatever readings we already had.
+      console.warn("[venues] poll failed", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshVenues();
+    const id = setInterval(refreshVenues, 15_000);
+    return () => clearInterval(id);
+  }, [refreshVenues]);
 
   const feed = mode === "mock" ? deriveFeed(scenario) : liveFeed;
   const venues = mode === "mock" ? deriveVenues(scenario) : liveVenues;
