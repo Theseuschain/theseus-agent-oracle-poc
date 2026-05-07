@@ -67,18 +67,18 @@ export function ScenarioControls({
           )}
           <div className="flex gap-0.5 p-0.5 rounded-[8px] bg-bg border border-border">
             <ModeChip
-              active={agentMode === "rule"}
-              disabled={disabled}
-              onClick={() => onAgentModeChange("rule")}
-              icon={<Cog size={10} />}
-              label="Rules"
-            />
-            <ModeChip
               active={agentMode === "deepseek"}
               disabled={disabled}
               onClick={() => onAgentModeChange("deepseek")}
               icon={<Brain size={10} />}
               label="Agent"
+            />
+            <ModeChip
+              active={agentMode === "rule"}
+              disabled={disabled}
+              onClick={() => onAgentModeChange("rule")}
+              icon={<Cog size={10} />}
+              label="Rules"
             />
           </div>
           {dirty && (
@@ -176,7 +176,7 @@ export function ScenarioControls({
           <div className="flex items-baseline justify-between mb-3">
             <div className="eyebrow">Scenarios</div>
             {agentMode === "rule" && (
-              <span className="mono text-[10px] text-fg-mute">switch to Agent for these</span>
+              <span className="mono text-[10px] text-fg-mute">flip to Agent for these</span>
             )}
           </div>
           <div className="grid grid-cols-1 gap-2">
