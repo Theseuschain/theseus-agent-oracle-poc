@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CircleCheck, CircleX, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { TimelineEntry } from "@/lib/terra-scenario";
 import { terraCounterfactual } from "@/lib/counterfactual";
+import { useTypewriter } from "@/lib/use-typewriter";
 import { CounterfactualBadge } from "../CounterfactualBadge";
 
 interface Props {
@@ -58,7 +59,20 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
 
   const isPending = !!entry.pending || !entry.verdict;
   const allowed = !isPending && entry.verdict?.decision === "ALLOW";
-  const oneLiner = entry.verdict ? reasoningOneLiner(entry.verdict.reasoning) : undefined;
+
+  // Single source of truth for the reasoning text: streaming partial
+  // while the LLM call is in flight, then the final once it lands.
+  const reasoningText =
+    entry.streamingReasoning ?? entry.verdict?.reasoning ?? "";
+  const typedReasoning = useTypewriter(reasoningText);
+  const typewriterCaughtUp =
+    !!reasoningText && typedReasoning.length >= reasoningText.length;
+  const stillTyping = !!reasoningText && !typewriterCaughtUp;
+
+  const oneLiner =
+    !isPending && !stillTyping && entry.verdict
+      ? reasoningOneLiner(entry.verdict.reasoning)
+      : undefined;
   const cf = entry.verdict
     ? terraCounterfactual(
         entry.vaultSnapshot,
@@ -111,13 +125,15 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
               The agent is reading the vault metrics…
             </div>
           )}
-          {isPending && entry.streamingReasoning && (
+          {(isPending || stillTyping) && typedReasoning && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim">
-              <span className="italic">{entry.streamingReasoning}</span>
-              <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+              <span className="italic">{typedReasoning}</span>
+              {!typewriterCaughtUp && (
+                <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+              )}
             </div>
           )}
-          {!isPending && oneLiner && (
+          {!isPending && !stillTyping && oneLiner && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
               &ldquo;{oneLiner}&rdquo;
             </div>

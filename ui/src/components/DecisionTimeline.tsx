@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TimelineEntry, AgentInspect, VenueReading } from "@/lib/types";
 import { aaveCounterfactual } from "@/lib/counterfactual";
 import { formatBlock, formatHash, formatUsd } from "@/lib/format";
+import { useTypewriter } from "@/lib/use-typewriter";
 import { CircleCheck, CircleX, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { CounterfactualBadge } from "./CounterfactualBadge";
 
@@ -76,7 +77,19 @@ function TimelineRow({
   const isPending = !!e.pending;
   const hasReasoning = !isPending && !!e.reasoning;
   const hasInspect = !isPending && !!e.inspect;
-  const oneLiner = isPending ? undefined : reasoningOneLiner(e.reasoning);
+
+  // Animate the reasoning text at a readable pace. The streaming text
+  // (during pending) and the final reasoning (after) flow through the
+  // same typewriter, so the transition stays smooth.
+  const typedReasoning = useTypewriter(e.reasoning ?? "");
+  const typewriterCaughtUp =
+    !!e.reasoning && typedReasoning.length >= e.reasoning.length;
+  // While the typewriter is still catching up, keep showing the
+  // animated text instead of the static one-liner — even after the
+  // verdict has landed.
+  const stillTyping = !!e.reasoning && !typewriterCaughtUp;
+  const oneLiner =
+    isPending || stillTyping ? undefined : reasoningOneLiner(e.reasoning);
 
   // Counterfactual: only meaningful for committed verdicts.
   const cf = !isPending && e.inspect
@@ -140,13 +153,15 @@ function TimelineRow({
               The agent is reading the venues and reconciling…
             </div>
           )}
-          {isPending && e.reasoning && (
+          {(isPending || stillTyping) && typedReasoning && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim">
-              <span className="italic">{e.reasoning}</span>
-              <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+              <span className="italic">{typedReasoning}</span>
+              {!typewriterCaughtUp && (
+                <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+              )}
             </div>
           )}
-          {!isPending && oneLiner && (
+          {!isPending && !stillTyping && oneLiner && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
               &ldquo;{oneLiner}&rdquo;
             </div>
