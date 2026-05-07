@@ -156,6 +156,20 @@ function InspectPanel({ inspect }: { inspect: AgentInspect }) {
 
   return (
     <div className="mt-2 p-3 rounded-[8px] bg-bg border border-border text-xs space-y-3">
+      <div className="rounded-[6px] border border-coral/30 bg-coral/5 px-3 py-2 mono text-[10px] leading-relaxed text-fg-dim">
+        <span className="text-coral">Proof of Agenthood ·</span> the model that
+        ran, the full context it saw, and the reasoning it produced are all
+        visible below. On Theseus, this bundle is signed and committed on-chain
+        so any third party can verify it.{" "}
+        <a
+          href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
+          className="text-coral hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          See this agent&apos;s profile ↗
+        </a>
+      </div>
       <Section label="What the agent saw">
         <ul className="space-y-1">
           {inspect.venues.map((v) => (

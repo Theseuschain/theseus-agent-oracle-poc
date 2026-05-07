@@ -120,6 +120,20 @@ function Inspect({ entry }: { entry: TimelineEntry }) {
 
   return (
     <div className="mt-2 p-3 rounded-[8px] bg-bg border border-border text-xs space-y-3">
+      <div className="rounded-[6px] border border-coral/30 bg-coral/5 px-3 py-2 mono text-[10px] leading-relaxed text-fg-dim">
+        <span className="text-coral">Proof of Agenthood ·</span> the model that
+        ran, the full context it saw, and the reasoning it produced are all
+        visible below. On Theseus, this bundle is signed and committed on-chain
+        so any third party can verify it.{" "}
+        <a
+          href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
+          className="text-coral hover:underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          See this agent&apos;s profile ↗
+        </a>
+      </div>
       <div>
         <div className="eyebrow mb-1.5">Vault state at decision</div>
         <ul className="space-y-1 mono text-[10px] text-fg-dim">
