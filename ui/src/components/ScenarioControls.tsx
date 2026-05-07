@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, ZapOff, Power, Brain, Cog, Activity, TrendingDown, FlaskConical } from "lucide-react";
+import { Zap, ZapOff, Power, Activity, TrendingDown, FlaskConical } from "lucide-react";
 import { VenueReading } from "@/lib/types";
-import { AgentMode } from "@/lib/mock-scenario";
 import { ShareLinkButton } from "./ShareLinkButton";
 
 type Venue = VenueReading["venue"];
@@ -11,9 +10,7 @@ type Venue = VenueReading["venue"];
 interface Props {
   haltedVenues: Venue[];
   anyOverride: boolean;
-  agentMode: AgentMode;
   agentPending: boolean;
-  onAgentModeChange: (mode: AgentMode) => void;
   onPumpAll: (priceUsd: number) => Promise<void> | void;
   onHaltToggle: (venue: Venue) => Promise<void> | void;
   onResetAll: () => Promise<void> | void;
@@ -30,9 +27,7 @@ const LABEL: Record<Venue, string> = {
 export function ScenarioControls({
   haltedVenues,
   anyOverride,
-  agentMode,
   agentPending,
-  onAgentModeChange,
   onPumpAll,
   onHaltToggle,
   onResetAll,
@@ -57,31 +52,14 @@ export function ScenarioControls({
 
   return (
     <div className="surface p-4 sm:p-5 mb-4">
-      {/* Header row: title + agent mode toggle + reset */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="eyebrow">Demo levers</div>
         <div className="flex items-center gap-3 flex-wrap">
           {agentPending && (
             <span className="mono text-[10px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
-              reasoning…
+              agent reasoning…
             </span>
           )}
-          <div className="flex gap-0.5 p-0.5 rounded-[8px] bg-bg border border-border">
-            <ModeChip
-              active={agentMode === "deepseek"}
-              disabled={disabled}
-              onClick={() => onAgentModeChange("deepseek")}
-              icon={<Brain size={10} />}
-              label="Agent"
-            />
-            <ModeChip
-              active={agentMode === "rule"}
-              disabled={disabled}
-              onClick={() => onAgentModeChange("rule")}
-              icon={<Cog size={10} />}
-              label="Rules"
-            />
-          </div>
           <ShareLinkButton disabled={disabled} />
           {dirty && (
             <button className="btn" onClick={() => wrap(onResetAll)} disabled={disabled}>
@@ -177,9 +155,6 @@ export function ScenarioControls({
         <div className="rounded-[10px] bg-surface-2 border border-border p-4">
           <div className="flex items-baseline justify-between mb-3">
             <div className="eyebrow">Scenarios</div>
-            {agentMode === "rule" && (
-              <span className="mono text-[10px] text-fg-mute">flip to Agent for these</span>
-            )}
           </div>
           <div className="grid grid-cols-1 gap-2">
             <ScenarioButton
@@ -211,33 +186,6 @@ export function ScenarioControls({
         Tamper a single venue from its card below.
       </div>
     </div>
-  );
-}
-
-function ModeChip({
-  active,
-  disabled,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      className={`mono text-[11px] py-1 px-2.5 rounded-[6px] flex items-center gap-1.5 transition ${
-        active ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
-      }`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

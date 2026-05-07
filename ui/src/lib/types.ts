@@ -33,13 +33,10 @@ export interface AgentInspect {
   venues: VenueReading[];
   referencePrice: number;
   scenarioHint?: string;
-  /** Which agent ran this decision. */
-  agent: "rule" | "deepseek";
-  /** LLM-only: what we sent to the model, full text. */
+  /** What we sent to the model, full text. */
   prompt?: { system: string; user: string };
-  /** LLM-only: raw content the model returned (before JSON parsing). */
+  /** Raw content the model returned (before JSON parsing). */
   rawResponse?: string;
-  /** LLM-only. */
   model?: string;
   latencyMs?: number;
 }
@@ -47,13 +44,17 @@ export interface AgentInspect {
 export interface TimelineEntry {
   block: number;
   decision: Decision;
+  /** True while the LLM call is still in flight for this entry. The
+   *  decision/price/reasoning fields are placeholders until the LLM
+   *  responds and replaces them. */
+  pending?: boolean;
   priceUsd?: number;
   maxDeviationBps?: number;
   reason?: string;
   reasonHash?: string;
   /** Natural-language chain-of-thought from the agent. Multi-line allowed. */
   reasoning?: string;
-  /** Everything the agent saw + (for LLM) the prompt and raw response. */
+  /** Everything the agent saw + the prompt and raw response. */
   inspect?: AgentInspect;
 }
 

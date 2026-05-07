@@ -4,18 +4,15 @@ import { useState } from "react";
 import { TimelineEntry, AgentInspect, VenueReading } from "@/lib/types";
 import { aaveCounterfactual } from "@/lib/counterfactual";
 import { formatBlock, formatHash, formatUsd } from "@/lib/format";
-import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog, Loader2 } from "lucide-react";
+import { CircleCheck, CircleX, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { CounterfactualBadge } from "./CounterfactualBadge";
 
 interface Props {
   entries: TimelineEntry[];
   loading?: boolean;
-  /** True while a DeepSeek call is in flight; the head row gets a
-   *  "thinking" treatment until the verdict is replaced. */
-  pending?: boolean;
 }
 
-export function DecisionTimeline({ entries, loading, pending }: Props) {
+export function DecisionTimeline({ entries, loading }: Props) {
   return (
     <div className="surface p-4 sm:p-6">
       <div className="flex items-center justify-between mb-5">
@@ -41,8 +38,6 @@ export function DecisionTimeline({ entries, loading, pending }: Props) {
               key={`${e.block}-${i}`}
               entry={e}
               defaultReasoningOpen={false}
-              isHead={i === 0}
-              pending={!!pending && i === 0}
             />
           ))}
         </ol>
@@ -72,22 +67,19 @@ function reasoningOneLiner(reasoning: string | undefined): string | undefined {
 function TimelineRow({
   entry: e,
   defaultReasoningOpen,
-  isHead,
-  pending,
 }: {
   entry: TimelineEntry;
   defaultReasoningOpen: boolean;
-  isHead: boolean;
-  pending: boolean;
 }) {
   const [reasoningOpen, setReasoningOpen] = useState(defaultReasoningOpen);
   const [inspectOpen, setInspectOpen] = useState(false);
-  const hasReasoning = !!e.reasoning;
-  const hasInspect = !!e.inspect;
-  const oneLiner = reasoningOneLiner(e.reasoning);
+  const isPending = !!e.pending;
+  const hasReasoning = !isPending && !!e.reasoning;
+  const hasInspect = !isPending && !!e.inspect;
+  const oneLiner = isPending ? undefined : reasoningOneLiner(e.reasoning);
 
-  // Counterfactual: if we have an inspect snapshot we can compute it.
-  const cf = e.inspect
+  // Counterfactual: only meaningful for committed verdicts.
+  const cf = !isPending && e.inspect
     ? aaveCounterfactual(
         e.inspect.venues,
         e.inspect.referencePrice,
@@ -100,7 +92,7 @@ function TimelineRow({
     <li className="py-3">
       <div className="flex items-start gap-3">
         <div className="pt-0.5">
-          {pending ? (
+          {isPending ? (
             <Loader2 size={14} className="text-coral animate-spin" />
           ) : e.decision === "REFUSED" ? (
             <CircleX size={14} className="text-red" />
@@ -113,34 +105,41 @@ function TimelineRow({
             <span className="mono text-[11px] text-fg-mute">
               block {formatBlock(e.block)}
             </span>
-            <span
-              className={`mono text-[11px] uppercase tracking-wider ${
-                e.decision === "REFUSED" ? "text-red" : "text-green"
-              }`}
-            >
-              {e.decision === "REFUSED" ? "refused" : "priced"}
-            </span>
-            {e.inspect && <AgentTag agent={e.inspect.agent} />}
-            {pending && (
-              <span className="mono text-[10px] text-coral pulse-coral rounded-full px-1.5 py-0.5 border border-coral/40">
+            {isPending ? (
+              <span className="mono text-[11px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
                 agent reasoning…
+              </span>
+            ) : (
+              <span
+                className={`mono text-[11px] uppercase tracking-wider ${
+                  e.decision === "REFUSED" ? "text-red" : "text-green"
+                }`}
+              >
+                {e.decision === "REFUSED" ? "refused" : "priced"}
               </span>
             )}
           </div>
-          <div className="mono text-sm text-fg mt-0.5 tnum">
-            {e.decision === "REFUSED" ? (
-              <span className="text-fg-dim break-words">{e.reason ?? "venue divergence"}</span>
-            ) : (
-              <>
-                {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "—"}
-                {e.maxDeviationBps !== undefined && (
-                  <span className="text-fg-mute ml-3">
-                    max deviation {e.maxDeviationBps.toFixed(0)}bps
-                  </span>
-                )}
-              </>
-            )}
-          </div>
+          {!isPending && (
+            <div className="mono text-sm text-fg mt-0.5 tnum">
+              {e.decision === "REFUSED" ? (
+                <span className="text-fg-dim break-words">{e.reason ?? "venue divergence"}</span>
+              ) : (
+                <>
+                  {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "—"}
+                  {e.maxDeviationBps !== undefined && (
+                    <span className="text-fg-mute ml-3">
+                      max deviation {e.maxDeviationBps.toFixed(0)}bps
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          {isPending && (
+            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-mute italic">
+              The agent is reading the venues and reconciling. Verdict in a moment.
+            </div>
+          )}
           {oneLiner && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
               &ldquo;{oneLiner}&rdquo;
@@ -154,31 +153,33 @@ function TimelineRow({
               divergesFromAgent={cf.divergesFromAgent}
             />
           )}
-          <div className="flex items-baseline gap-3 mt-2 flex-wrap">
-            {e.reasonHash && (
-              <span className="mono text-[10px] text-fg-mute">
-                {formatHash(e.reasonHash, 6, 6)}
-              </span>
-            )}
-            {hasReasoning && (
-              <button
-                className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
-                onClick={() => setReasoningOpen((o) => !o)}
-              >
-                {reasoningOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                full reasoning
-              </button>
-            )}
-            {hasInspect && (
-              <button
-                className="mono text-[10px] text-fg-dim hover:text-fg flex items-center gap-1"
-                onClick={() => setInspectOpen((o) => !o)}
-              >
-                {inspectOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                inspect input/output
-              </button>
-            )}
-          </div>
+          {!isPending && (
+            <div className="flex items-baseline gap-3 mt-2 flex-wrap">
+              {e.reasonHash && (
+                <span className="mono text-[10px] text-fg-mute">
+                  {formatHash(e.reasonHash, 6, 6)}
+                </span>
+              )}
+              {hasReasoning && (
+                <button
+                  className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
+                  onClick={() => setReasoningOpen((o) => !o)}
+                >
+                  {reasoningOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  full reasoning
+                </button>
+              )}
+              {hasInspect && (
+                <button
+                  className="mono text-[10px] text-fg-dim hover:text-fg flex items-center gap-1"
+                  onClick={() => setInspectOpen((o) => !o)}
+                >
+                  {inspectOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  inspect input/output
+                </button>
+              )}
+            </div>
+          )}
           {hasReasoning && reasoningOpen && (
             <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap break-words">
               {e.reasoning}
@@ -190,22 +191,6 @@ function TimelineRow({
         </div>
       </div>
     </li>
-  );
-}
-
-function AgentTag({ agent }: { agent: AgentInspect["agent"] }) {
-  const isAgent = agent === "deepseek";
-  return (
-    <span
-      className={`mono text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded ${
-        isAgent
-          ? "text-coral border border-coral/30 bg-coral/5"
-          : "text-fg-mute border border-border bg-surface-2"
-      }`}
-    >
-      {isAgent ? <Brain size={9} /> : <Cog size={9} />}
-      {isAgent ? "agent" : "rules"}
-    </span>
   );
 }
 
@@ -251,48 +236,41 @@ function InspectPanel({ inspect }: { inspect: AgentInspect }) {
         )}
       </Section>
 
-      {inspect.agent === "deepseek" && (
-        <>
-          <Section label={`Model · ${inspect.model ?? "deepseek-chat"} · ${inspect.latencyMs ?? "?"}ms`}>
-            <button
-              className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
-              onClick={() => setShowPrompt((o) => !o)}
-            >
-              {showPrompt ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-              show full prompt ({(inspect.prompt?.system.length ?? 0) +
-                (inspect.prompt?.user.length ?? 0)}{" "}
-              chars)
-            </button>
-            {showPrompt && inspect.prompt && (
-              <div className="mt-2 space-y-2">
-                <PromptBlock label="system" text={inspect.prompt.system} />
-                <PromptBlock label="user" text={inspect.prompt.user} />
-              </div>
-            )}
-          </Section>
-
-          {inspect.rawResponse && (
-            <Section label="Raw model response (JSON)">
-              <button
-                className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
-                onClick={() => setShowResponse((o) => !o)}
-              >
-                {showResponse ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                show raw output
-              </button>
-              {showResponse && (
-                <pre className="mt-2 p-2 rounded bg-surface-2 border border-border mono text-[10px] text-fg-dim whitespace-pre-wrap break-all overflow-x-auto max-h-96 leading-snug">
-                  {prettyJson(inspect.rawResponse)}
-                </pre>
-              )}
-            </Section>
+      {inspect.prompt && (
+        <Section label={`Model · ${inspect.model ?? "deepseek-chat"} · ${inspect.latencyMs ?? "?"}ms`}>
+          <button
+            className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
+            onClick={() => setShowPrompt((o) => !o)}
+          >
+            {showPrompt ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+            show full prompt ({(inspect.prompt?.system.length ?? 0) +
+              (inspect.prompt?.user.length ?? 0)}{" "}
+            chars)
+          </button>
+          {showPrompt && inspect.prompt && (
+            <div className="mt-2 space-y-2">
+              <PromptBlock label="system" text={inspect.prompt.system} />
+              <PromptBlock label="user" text={inspect.prompt.user} />
+            </div>
           )}
-        </>
+        </Section>
       )}
-      {inspect.agent === "rule" && (
-        <div className="mono text-[10px] text-fg-mute">
-          rule-based agent · no LLM prompt or raw response
-        </div>
+
+      {inspect.rawResponse && (
+        <Section label="Raw model response (JSON)">
+          <button
+            className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
+            onClick={() => setShowResponse((o) => !o)}
+          >
+            {showResponse ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+            show raw output
+          </button>
+          {showResponse && (
+            <pre className="mt-2 p-2 rounded bg-surface-2 border border-border mono text-[10px] text-fg-dim whitespace-pre-wrap break-all overflow-x-auto max-h-96 leading-snug">
+              {prettyJson(inspect.rawResponse)}
+            </pre>
+          )}
+        </Section>
       )}
     </div>
   );

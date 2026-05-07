@@ -5,30 +5,23 @@
  * mechanic: 1 USTD targets a $1 peg, backed by mint/burn against LUND at
  * the LUND/USD oracle price. Same shape as the May 2022 Terra collapse.
  *
- * Difference from a real on-chain protocol: the agent gates every mint /
- * redeem call. The protocol invokes the agent first; if the agent
- * REFUSES, the action reverts. A smart contract running this same
- * mechanism without an agent is exactly what melted in May 2022.
+ * Difference from a real on-chain protocol: an LLM agent gates every
+ * mint / redeem call. The protocol invokes the agent first; if the
+ * agent REFUSES, the action reverts. A smart contract running this
+ * mechanism without an agent is exactly what melted in May 2022 — the
+ * counterfactual badge on each row makes that visible.
  */
 
 export type ActionKind = "MINT" | "REDEEM";
 
 export interface VaultState {
-  /** USTD circulating supply (units of USTD). */
   ustdSupply: number;
-  /** LUND circulating supply (units of LUND). */
   lundSupply: number;
-  /** Latest LUND/USD oracle price. */
   lundPriceUsd: number;
-  /** Median USTD/USD across venues (Curve, CEXs). */
   ustdMedianUsd: number;
-  /** USTD volume redeemed for LUND in the past hour, as fraction of supply. */
   redemptionRate1h: number;
-  /** 24h LUND supply growth rate (1.0 = no change). */
   lundSupplyGrowth24h: number;
-  /** 24h LUND price change (1.0 = no change, 0.5 = -50%). */
   lundPriceChange24h: number;
-  /** Backing-asset value as fraction of USTD circulating supply. */
   reserveCoverage: number;
 }
 
@@ -36,8 +29,6 @@ export interface AgentVerdict {
   decision: "ALLOW" | "REFUSE";
   reason: string;
   reasoning: string;
-  /** "rule" or "deepseek". */
-  agent: "rule" | "deepseek";
   latencyMs?: number;
   model?: string;
   prompt?: { system: string; user: string };
@@ -45,27 +36,22 @@ export interface AgentVerdict {
 }
 
 export interface TimelineEntry {
-  /** Block height (synthetic). */
   block: number;
   action: ActionKind;
-  /** USTD amount the user is minting (when MINT) or burning (when REDEEM). */
   ustdAmount: number;
-  /** LUND amount the user is burning (MINT) or receiving (REDEEM). */
   lundAmount: number;
-  verdict: AgentVerdict;
+  /** Undefined while the agent is reasoning; filled in when the LLM responds. */
+  verdict?: AgentVerdict;
+  pending?: boolean;
   vaultSnapshot: VaultState;
-  /** Optional preset name for context. */
   scenarioLabel?: string;
 }
 
 export interface TerraScenarioState {
   vault: VaultState;
-  /** Newest first. */
   events: TimelineEntry[];
   blockOffset: number;
-  agentMode: "rule" | "deepseek";
   pending: boolean;
-  /** Last loaded preset name for display. */
   presetLabel: string;
 }
 
@@ -84,7 +70,6 @@ export const initialTerraScenario = (): TerraScenarioState => ({
   vault: { ...HEALTHY },
   events: [],
   blockOffset: 0,
-  agentMode: "rule",
   pending: false,
   presetLabel: "Healthy",
 });
@@ -131,11 +116,11 @@ export const PRESETS: Record<string, { label: string; description: string; vault
       ustdSupply: 11_800_000_000,
       lundSupply: 1_120_000_000,
       lundPriceUsd: 22.0,
-      ustdMedianUsd: 0.65,
       redemptionRate1h: 0.041,
       lundSupplyGrowth24h: 3.2,
       lundPriceChange24h: 0.27,
       reserveCoverage: 0.08,
+      ustdMedianUsd: 0.65,
     },
   },
   spiral: {
@@ -155,115 +140,65 @@ export const PRESETS: Record<string, { label: string; description: string; vault
 };
 
 // =============================================================================
-// Rule-based agent (the always-allow naive contract is the baseline; this rule
-// agent is a step up that uses static thresholds to gate)
-// =============================================================================
-
-export function ruleAgentVerdict(vault: VaultState, action: ActionKind): AgentVerdict {
-  const pegDevBps = (1 - vault.ustdMedianUsd) * 10_000;
-  const warnings: string[] = [];
-
-  if (pegDevBps > 50) warnings.push(`peg ${pegDevBps.toFixed(0)}bps below $1`);
-  if (vault.redemptionRate1h > 0.005) warnings.push(`redemption rate ${(vault.redemptionRate1h * 100).toFixed(2)}%/h`);
-  if (vault.lundSupplyGrowth24h > 1.05)
-    warnings.push(`LUND supply +${((vault.lundSupplyGrowth24h - 1) * 100).toFixed(0)}% in 24h`);
-  if (vault.lundPriceChange24h < 0.9)
-    warnings.push(`LUND -${((1 - vault.lundPriceChange24h) * 100).toFixed(0)}% in 24h`);
-  if (vault.reserveCoverage < 0.2)
-    warnings.push(`reserves ${(vault.reserveCoverage * 100).toFixed(1)}% of supply`);
-
-  const severe =
-    pegDevBps > 200 ||
-    vault.redemptionRate1h > 0.02 ||
-    vault.lundSupplyGrowth24h > 1.3 ||
-    vault.lundPriceChange24h < 0.6 ||
-    vault.reserveCoverage < 0.1;
-
-  if (warnings.length === 0) {
-    return {
-      decision: "ALLOW",
-      reason: "vault healthy",
-      reasoning: `All five health signals within thresholds. Peg at $${vault.ustdMedianUsd.toFixed(3)}, redemption rate ${(vault.redemptionRate1h * 100).toFixed(2)}%/h, LUND supply growth ${((vault.lundSupplyGrowth24h - 1) * 100).toFixed(1)}% in 24h, LUND price change ${((vault.lundPriceChange24h - 1) * 100).toFixed(1)}% in 24h, reserves at ${(vault.reserveCoverage * 100).toFixed(1)}%. Allowing.`,
-      agent: "rule",
-    };
-  }
-
-  if (severe || warnings.length >= 2) {
-    return {
-      decision: "REFUSE",
-      reason: `${warnings.length} warning${warnings.length === 1 ? "" : "s"}: ${warnings[0]}`,
-      reasoning: `Multiple stress signals firing: ${warnings.join("; ")}. This is a death-spiral signature. ${action === "MINT" ? "Minting more USTD adds new claims to a system that can't honor them." : "Redeeming more USTD forces more LUND issuance, accelerating the supply explosion."} Refusing.`,
-      agent: "rule",
-    };
-  }
-
-  // 1 warning, action-aware
-  if (action === "MINT") {
-    return {
-      decision: "REFUSE",
-      reason: `1 warning: ${warnings[0]}, refusing inflow`,
-      reasoning: `Single stress signal: ${warnings[0]}. Outflows under stress are users exiting and should not be blocked. But minting new USTD adds claims to a stressed system. Refusing the mint.`,
-      agent: "rule",
-    };
-  }
-
-  return {
-    decision: "ALLOW",
-    reason: `1 warning: ${warnings[0]}, allowing outflow`,
-    reasoning: `Single stress signal: ${warnings[0]}. Allowing outflow — blocking exits during a wobble turns it into a panic. Mints would be refused at this level. Allowing.`,
-    agent: "rule",
-  };
-}
-
-/** Naive contract: always allows. The Terra-2022 default. */
-export function naiveAllow(): AgentVerdict {
-  return {
-    decision: "ALLOW",
-    reason: "naive contract: always allow",
-    reasoning: "A smart contract running this mechanism executes the rule unconditionally. Allowing.",
-    agent: "rule",
-  };
-}
-
-// =============================================================================
 // Apply user actions
 // =============================================================================
 
-export function applyAction(
+/** Push a pending placeholder onto the timeline. The agent fills in the
+ *  verdict (and we re-apply the vault mutation if allowed) when the LLM
+ *  responds. */
+export function applyPendingAction(
   state: TerraScenarioState,
   action: ActionKind,
   ustdAmount: number,
-  verdict: AgentVerdict,
 ): TerraScenarioState {
-  // For demo purposes, lundAmount = ustdAmount / lundPrice on the post-action
-  // reverse direction. (MINT means burn LUND→get USTD; REDEEM means burn USTD→get LUND.)
   const lundAmount = ustdAmount / Math.max(state.vault.lundPriceUsd, 0.0001);
-
-  const block = state.vault ? 7_000_000 + state.blockOffset + 1 : 7_000_000;
+  const block = 7_000_000 + state.blockOffset + 1;
   const entry: TimelineEntry = {
     block,
     action,
     ustdAmount,
     lundAmount,
-    verdict,
+    pending: true,
     vaultSnapshot: { ...state.vault },
     scenarioLabel: state.presetLabel,
   };
+  return {
+    ...state,
+    events: [entry, ...state.events].slice(0, 30),
+    blockOffset: state.blockOffset + 1,
+    pending: true,
+  };
+}
 
-  // Only mutate vault when allowed.
+/** Replace the head pending event with the agent's verdict. If allowed,
+ *  also apply the vault mutation. */
+export function applyAgentVerdict(
+  state: TerraScenarioState,
+  verdict: AgentVerdict,
+): TerraScenarioState {
+  if (state.events.length === 0 || !state.events[0].pending) {
+    return { ...state, pending: false };
+  }
+  const head = state.events[0];
+  const finalized: TimelineEntry = {
+    ...head,
+    pending: false,
+    verdict,
+  };
+
   let nextVault = state.vault;
   if (verdict.decision === "ALLOW") {
-    if (action === "MINT") {
+    if (head.action === "MINT") {
       nextVault = {
         ...state.vault,
-        ustdSupply: state.vault.ustdSupply + ustdAmount,
-        lundSupply: Math.max(0, state.vault.lundSupply - lundAmount),
+        ustdSupply: state.vault.ustdSupply + head.ustdAmount,
+        lundSupply: Math.max(0, state.vault.lundSupply - head.lundAmount),
       };
     } else {
       nextVault = {
         ...state.vault,
-        ustdSupply: Math.max(0, state.vault.ustdSupply - ustdAmount),
-        lundSupply: state.vault.lundSupply + lundAmount,
+        ustdSupply: Math.max(0, state.vault.ustdSupply - head.ustdAmount),
+        lundSupply: state.vault.lundSupply + head.lundAmount,
       };
     }
   }
@@ -271,8 +206,8 @@ export function applyAction(
   return {
     ...state,
     vault: nextVault,
-    events: [entry, ...state.events].slice(0, 30),
-    blockOffset: state.blockOffset + 1,
+    events: [finalized, ...state.events.slice(1)],
+    pending: false,
   };
 }
 
@@ -287,10 +222,6 @@ export function applyPreset(
     presetLabel: p.label,
     blockOffset: state.blockOffset + 1,
   };
-}
-
-export function setTerraAgentMode(state: TerraScenarioState, mode: "rule" | "deepseek"): TerraScenarioState {
-  return { ...state, agentMode: mode };
 }
 
 export function setTerraPending(state: TerraScenarioState, pending: boolean): TerraScenarioState {

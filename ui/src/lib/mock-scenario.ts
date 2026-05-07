@@ -17,6 +17,10 @@
  *
  * 3. Halt a venue → agent recognizes the venue as stale via off-chain
  *    context (a status-page or news event). A contract has no API for this.
+ *
+ * Every user action triggers a real LLM call (deepseek-chat). Until the
+ * response lands the timeline shows a pending placeholder; we never fall
+ * back to a templated rule verdict.
  */
 
 import {
@@ -29,34 +33,28 @@ import {
 
 type Venue = VenueReading["venue"];
 
-export type AgentMode = "rule" | "deepseek";
-
 /** Per-venue depth multiplier. 1.0 = unmodified. 0.05 = 95% depth collapse. */
 export type DepthMultipliers = Partial<Record<Venue, number>>;
 
 export interface ScenarioState {
-  /** Which agent is making the decisions. */
-  agentMode: AgentMode;
   /** Per-venue price overrides. */
   overrides: Partial<Record<Venue, number>>;
   /** Per-venue depth multipliers (used by depth-collapse scenarios). */
   depthMultipliers: DepthMultipliers;
   /** Venues marked stale by an injected halt event. */
   halted: Partial<Record<Venue, true>>;
-  /** Most recent live readings from /api/venues. Used as the base values
-   *  the venue cards display when no override / halt is active. */
+  /** Most recent live readings from /api/venues. */
   liveBase: VenueReading[];
   /** Reference price the agent uses to detect "extreme baseline deviation"
    *  (the Mango shape). Snapshotted from the depth-weighted median of
-   *  liveBase the moment any override / halt becomes active, so the demo's
-   *  comparison is against the price the chain saw before manipulation. */
+   *  liveBase the moment any override / halt becomes active. */
   referencePrice: number;
   position: UserPosition;
-  /** Block height ticks every scenario action so "block N" advances. */
   blockOffset: number;
   /** Refused/priced events the user has caused. Newest first. */
   events: TimelineEntry[];
-  /** True while a DeepSeek call is in flight. */
+  /** True while a DeepSeek call is in flight. Mirrored on the head event
+   *  too (entry.pending). */
   pending: boolean;
 }
 
@@ -67,12 +65,11 @@ const DEFAULT_BASE: VenueReading[] = [
 ];
 
 export const initialScenario = (): ScenarioState => ({
-  agentMode: "rule",
   overrides: {},
   depthMultipliers: {},
   halted: {},
   liveBase: DEFAULT_BASE,
-  referencePrice: 0, // populated on first /api/venues poll
+  referencePrice: 0,
   blockOffset: 0,
   events: [],
   pending: false,
@@ -103,12 +100,6 @@ export function hashForReason(decision: "PRICED" | "REFUSED", reason: string): s
   if (/insufficient|halt|stale/.test(r)) return REFUSED_HASH_HALT;
   return REFUSED_HASH_DIVERGENCE;
 }
-
-const VENUE_LABEL: Record<Venue, string> = {
-  coinbase: "Coinbase",
-  binance: "Binance",
-  uniswap: "Uniswap V3",
-};
 
 function currentBlock(offset: number): number {
   return 5_513_807 + offset * 10;
@@ -150,140 +141,40 @@ export function deriveVenues(state: ScenarioState): VenueReading[] {
   });
 }
 
-interface RefusalAnalysis {
-  decision: Decision;
-  reason: string;
-  reasonHash: string;
-  reasoning: string;
-  reportedPrice?: number;
-  maxDeviationBps?: number;
-}
-
-/**
- * The agent's reconciliation policy. Three rules, in order. Each fires with
- * a structurally different reasoning paragraph.
- */
-export function analyze(state: ScenarioState): RefusalAnalysis {
-  const venues = deriveVenues(state);
-  const valid = venues.filter((v) => v.ok);
-  const haltedVenues = venues.filter((v) => !v.ok);
-
-  // Rule 1: insufficient venues (context-derived staleness)
-  if (valid.length < 2) {
-    const haltedNames = haltedVenues.map((v) => VENUE_LABEL[v.venue]).join(", ");
-    return {
-      decision: "REFUSED",
-      reason: `insufficient_venues: ${valid.length}/3 active`,
-      reasonHash: REFUSED_HASH_HALT,
-      reasoning: [
-        `${haltedNames} ${haltedVenues.length === 1 ? "is" : "are"} reporting halted trading via off-chain status events.`,
-        `That leaves ${valid.length} active venue${valid.length === 1 ? "" : "s"}, below the policy minimum of 2 independent reads.`,
-        `A smart contract using a stale Chainlink feed would have no signal that an exchange has halted; the feed keeps reporting whatever was last submitted.`,
-        `Refusing until at least 2 venues recover.`,
-      ].join(" "),
-    };
-  }
-
-  const median = depthWeightedMedian(valid);
-
-  // Rule 2 — exitability / extreme baseline deviation (Mango shape).
-  // Only fires when the venues actually AGREE on the manipulated price —
-  // that's the signature of a coordinated mark-pump where every reporting
-  // venue is the same shallow pool. Single-venue tampers should fall
-  // through to Rule 3 (numerical divergence).
-  if (state.referencePrice > 0 && valid.length >= 2) {
-    const minP = Math.min(...valid.map((v) => v.priceUsd));
-    const maxP = Math.max(...valid.map((v) => v.priceUsd));
-    const venueSpread = minP > 0 ? (maxP - minP) / minP : Infinity;
-    const venuesAgree = venueSpread < 0.05; // within 5% of each other
-    const baselineDeviation = Math.abs(median - state.referencePrice) / state.referencePrice;
-    if (venuesAgree && baselineDeviation > 0.5) {
-      const moveX = (median / state.referencePrice).toFixed(1);
-      const totalDepth = valid.reduce((s, v) => s + v.depthUsd, 0);
-      const reportedDepthFmt =
-        totalDepth >= 1e9 ? `$${(totalDepth / 1e9).toFixed(2)}B`
-        : totalDepth >= 1e6 ? `$${(totalDepth / 1e6).toFixed(1)}M`
-        : `$${totalDepth.toFixed(0)}`;
-      return {
-        decision: "REFUSED",
-        reason: `exitability: ${moveX}x move with insufficient real depth`,
-        reasonHash: REFUSED_HASH_EXITABILITY,
-        reasoning: [
-          `All ${valid.length} active venues report ~$${median.toFixed(0)}, sitting at the same level (zero numerical divergence between feeds).`,
-          `A venue-quorum oracle would price this.`,
-          `But cumulative depth across these venues is ${reportedDepthFmt}, unchanged from the pre-move baseline (~$${state.referencePrice.toFixed(0)}). Real liquidity doesn't materialize at synthetic prices. A $100M liquidation at $${median.toFixed(0)} would clear the entire visible book.`,
-          `This pattern matches Mango Markets (Oct 2022, $116M) and Bybit MNGO (2023): a coordinated mark-pump where every reporting venue was the same shallow pool.`,
-          `A smart contract reading three Chainlink feeds that all agree has no rule to fire here. Refusing.`,
-        ].join(" "),
-        reportedPrice: median,
-      };
-    }
-  }
-
-  // Rule 3 — numerical divergence (single-venue tamper).
-  let maxDev = 0;
-  let worst: VenueReading | null = null;
-  for (const v of valid) {
-    const dev = Math.abs(v.priceUsd - median) / median;
-    if (dev > maxDev) {
-      maxDev = dev;
-      worst = v;
-    }
-  }
-  if (worst && maxDev > 0.005) {
-    const reference = valid.find((v) => v !== worst) ?? worst;
-    const ratio = worst.priceUsd / reference.priceUsd;
-    const direction =
-      ratio >= 2 ? `${ratio.toFixed(1)}×`
-      : ratio <= 0.5 ? `${(1 / ratio).toFixed(1)}× below`
-      : `${Math.abs((ratio - 1) * 100).toFixed(1)}%`;
-    const reasonShort = `${worst.venue} divergent from ${reference.venue} by ${direction}`;
-    return {
-      decision: "REFUSED",
-      reason: reasonShort,
-      reasonHash: REFUSED_HASH_DIVERGENCE,
-      reasoning: [
-        `${VENUE_LABEL[worst.venue]} reports $${worst.priceUsd.toFixed(2)}, ${VENUE_LABEL[reference.venue]} reports $${reference.priceUsd.toFixed(2)}. That is a divergence of ${direction}, far above the 50bps policy threshold.`,
-        `Cross-venue spreads on ETH/USD normally sit at single-digit bps. Disagreement at this scale is the signature of a flash-loan-manipulated AMM or a thin-book pump on a single venue.`,
-        `Refusing until the readings reconcile.`,
-      ].join(" "),
-      maxDeviationBps: maxDev * 10000,
-    };
-  }
-
-  // Priced.
-  const maxDevBps = maxDev * 10000;
+/** Snapshot a pending placeholder event for a fresh user action. The
+ *  agent fills in decision/price/reasoning when the LLM call returns. */
+function pendingEvent(state: ScenarioState): TimelineEntry {
   return {
-    decision: "PRICED",
-    reason: `priced: median ${median.toFixed(2)}, max deviation ${maxDevBps.toFixed(0)}bps`,
-    reasonHash: PRICED_HASH,
-    reasoning: `${valid.length} venues reconciled to within ${maxDevBps.toFixed(0)}bps of depth-weighted median. Pricing $${median.toFixed(2)}.`,
-    reportedPrice: median,
-    maxDeviationBps: maxDevBps,
+    block: currentBlock(state.blockOffset),
+    decision: "UNINITIALIZED",
+    pending: true,
+    inspect: {
+      venues: deriveVenues(state),
+      referencePrice: state.referencePrice,
+    },
   };
 }
 
 export function deriveFeed(state: ScenarioState): FeedSnapshot {
   const block = currentBlock(state.blockOffset);
 
-  // After the first user-triggered action, the head event is authoritative —
-  // it carries either the rule-based or the DeepSeek decision (DeepSeek
-  // having replaced the rule event when it returned). The feed reflects it.
-  if (state.events.length > 0) {
-    const head = state.events[0];
-    if (head.decision === "REFUSED") {
+  // Find the most recent NON-pending event. The contract holds the last
+  // committed price while the agent is reasoning over the next one.
+  const lastCommitted = state.events.find((e) => !e.pending);
+  if (lastCommitted) {
+    if (lastCommitted.decision === "REFUSED") {
       return {
         decision: "REFUSED",
         priceUsd: 0,
         updatedAt: nowSec() - 5,
         block,
-        reasonHash: head.reasonHash ?? PRICED_HASH,
+        reasonHash: lastCommitted.reasonHash ?? PRICED_HASH,
         ageSeconds: 5,
       };
     }
     return {
       decision: "PRICED",
-      priceUsd: head.priceUsd ?? 0,
+      priceUsd: lastCommitted.priceUsd ?? 0,
       updatedAt: nowSec() - 12,
       block,
       reasonHash: PRICED_HASH,
@@ -291,26 +182,27 @@ export function deriveFeed(state: ScenarioState): FeedSnapshot {
     };
   }
 
-  // First paint — fall back to a synchronous rule-based read so the feed
-  // shows a price from the live venues immediately.
-  const a = analyze(state);
-  if (a.decision === "REFUSED") {
+  // First paint — no committed events. Synthesize a PRICED snapshot from
+  // the live readings so the feed isn't blank.
+  const venues = deriveVenues(state);
+  const valid = venues.filter((v) => v.ok && v.depthUsd > 0);
+  if (valid.length >= 2) {
     return {
-      decision: "REFUSED",
-      priceUsd: 0,
-      updatedAt: nowSec() - 5,
+      decision: "PRICED",
+      priceUsd: depthWeightedMedian(valid),
+      updatedAt: nowSec() - 12,
       block,
-      reasonHash: a.reasonHash,
-      ageSeconds: 5,
+      reasonHash: PRICED_HASH,
+      ageSeconds: 12,
     };
   }
   return {
-    decision: "PRICED",
-    priceUsd: a.reportedPrice ?? 0,
-    updatedAt: nowSec() - 12,
+    decision: "UNINITIALIZED",
+    priceUsd: 0,
+    updatedAt: nowSec(),
     block,
     reasonHash: PRICED_HASH,
-    ageSeconds: 12,
+    ageSeconds: 0,
   };
 }
 
@@ -321,32 +213,12 @@ export function deriveTimeline(state: ScenarioState): TimelineEntry[] {
   const block = currentBlock(state.blockOffset);
   const seedFromReference: TimelineEntry[] = state.referencePrice > 0
     ? [
-        { block: block - 10, decision: "PRICED", priceUsd: state.referencePrice * 0.9999, maxDeviationBps: 9, reasoning: `3 venues reconciled to within 9bps of $${state.referencePrice.toFixed(2)}.` },
-        { block: block - 20, decision: "PRICED", priceUsd: state.referencePrice * 1.0001, maxDeviationBps: 11, reasoning: `3 venues reconciled to within 11bps.` },
-        { block: block - 30, decision: "PRICED", priceUsd: state.referencePrice * 0.9997, maxDeviationBps: 7, reasoning: `3 venues reconciled to within 7bps.` },
+        { block: block - 10, decision: "PRICED", priceUsd: state.referencePrice * 0.9999, maxDeviationBps: 9 },
+        { block: block - 20, decision: "PRICED", priceUsd: state.referencePrice * 1.0001, maxDeviationBps: 11 },
+        { block: block - 30, decision: "PRICED", priceUsd: state.referencePrice * 0.9997, maxDeviationBps: 7 },
       ]
     : [];
   return [...state.events, ...seedFromReference].slice(0, 20);
-}
-
-function recordEvent(state: ScenarioState, scenarioHint?: string): TimelineEntry {
-  const a = analyze(state);
-  const block = currentBlock(state.blockOffset + 1);
-  return {
-    block,
-    decision: a.decision,
-    priceUsd: a.reportedPrice,
-    maxDeviationBps: a.maxDeviationBps,
-    reason: a.reason,
-    reasonHash: a.reasonHash,
-    reasoning: a.reasoning,
-    inspect: {
-      venues: deriveVenues(state),
-      referencePrice: state.referencePrice,
-      scenarioHint,
-      agent: "rule",
-    },
-  };
 }
 
 /**
@@ -372,6 +244,20 @@ export function applyLiveReadings(
   };
 }
 
+// ─── State changes ─────────────────────────────────────────────────────────
+// Each user action just mutates the manipulation surface (overrides /
+// halted / depth) and pushes a pending placeholder onto events. The
+// caller (page.tsx) then issues the LLM call and replaces the head
+// placeholder when it returns.
+
+function withPending(state: ScenarioState): ScenarioState {
+  return {
+    ...state,
+    pending: true,
+    events: [pendingEvent(state), ...state.events].slice(0, 20),
+  };
+}
+
 export function applyTamper(
   state: ScenarioState,
   venue: Venue,
@@ -382,7 +268,7 @@ export function applyTamper(
     overrides: { ...state.overrides, [venue]: priceUsd },
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
 export function applyPumpAll(
@@ -394,7 +280,7 @@ export function applyPumpAll(
     overrides: { coinbase: priceUsd, binance: priceUsd, uniswap: priceUsd },
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
 export function applyHalt(state: ScenarioState, venue: Venue): ScenarioState {
@@ -403,7 +289,7 @@ export function applyHalt(state: ScenarioState, venue: Venue): ScenarioState {
     halted: { ...state.halted, [venue]: true },
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
 export function applyUnhalt(state: ScenarioState, venue: Venue): ScenarioState {
@@ -414,7 +300,7 @@ export function applyUnhalt(state: ScenarioState, venue: Venue): ScenarioState {
     halted,
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
 export function applyReset(state: ScenarioState): ScenarioState {
@@ -425,50 +311,21 @@ export function applyReset(state: ScenarioState): ScenarioState {
     halted: {},
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
-export function setAgentMode(state: ScenarioState, mode: AgentMode): ScenarioState {
-  return { ...state, agentMode: mode };
-}
-
-export function setPending(state: ScenarioState, pending: boolean): ScenarioState {
-  return { ...state, pending };
-}
-
-/** Apply a parsed LLM decision to the scenario as a new timeline event,
- *  but without further mutating overrides — those are still controlled by
- *  the existing tamper/halt actions that triggered the decision. */
-export function applyLLMEvent(
-  state: ScenarioState,
-  event: TimelineEntry,
-): ScenarioState {
-  return {
-    ...state,
-    events: [event, ...state.events].slice(0, 20),
-    pending: false,
-  };
-}
-
-/** Parametric scenario constructors used by the demo's "black-swan" buttons.
- *  Each builds a multiplicative override on top of the live base readings,
- *  so the resulting state is grounded in the actual current ETH price. */
 export function applyDepthCollapse(
   state: ScenarioState,
-  factor: number, // e.g. 0.05 = depth drops to 5% of normal
+  factor: number,
 ): ScenarioState {
   const next: ScenarioState = {
     ...state,
     depthMultipliers: { coinbase: factor, binance: factor, uniswap: factor },
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
 
-/** Pump every venue by the same multiplier, holding depth constant. Used for
- *  "just-under-threshold" and "real flash crash" scenarios. The agent has to
- *  reason about whether the move is plausible given the depth that didn't
- *  follow it. */
 export function applyProportionalMove(
   state: ScenarioState,
   multiplier: number,
@@ -484,16 +341,37 @@ export function applyProportionalMove(
     overrides,
     blockOffset: state.blockOffset + 1,
   };
-  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+  return withPending(next);
 }
+
+export function setPending(state: ScenarioState, pending: boolean): ScenarioState {
+  return { ...state, pending };
+}
+
+/** Replace the pending head event with the agent's verdict. If for some
+ *  reason there's no pending head, prepend the verdict. */
+export function applyAgentEvent(
+  state: ScenarioState,
+  event: TimelineEntry,
+): ScenarioState {
+  const events = state.events.slice();
+  if (events.length > 0 && events[0].pending) {
+    events[0] = event;
+  } else {
+    events.unshift(event);
+  }
+  return { ...state, events: events.slice(0, 20), pending: false };
+}
+
+// ─── Position math (independent of agent) ──────────────────────────────────
 
 export function applyPositionAction(
   state: ScenarioState,
   action: "deposit" | "borrow" | "repay" | "withdraw",
   amount: number,
 ): ScenarioState {
-  const a = analyze(state);
-  const lastPrice = a.reportedPrice ?? state.referencePrice;
+  const lastCommitted = state.events.find((e) => !e.pending);
+  const lastPrice = lastCommitted?.priceUsd ?? state.referencePrice;
   const p = { ...state.position };
 
   if (action === "deposit") p.collateralWeth += amount;

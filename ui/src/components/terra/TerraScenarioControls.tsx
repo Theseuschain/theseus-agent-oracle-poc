@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Cog, FastForward, RotateCcw } from "lucide-react";
+import { FastForward, RotateCcw } from "lucide-react";
 import { PRESETS } from "@/lib/terra-scenario";
 import { ShareLinkButton } from "../ShareLinkButton";
 
-type AgentMode = "rule" | "deepseek";
-
 interface Props {
-  agentMode: AgentMode;
   agentPending: boolean;
   presetLabel: string;
-  onAgentModeChange: (m: AgentMode) => void;
   onPreset: (key: keyof typeof PRESETS) => Promise<void> | void;
   onReset: () => Promise<void> | void;
 }
@@ -19,10 +15,8 @@ interface Props {
 const ORDER: (keyof typeof PRESETS)[] = ["healthy", "wobble", "cracking", "bankRun", "spiral"];
 
 export function TerraScenarioControls({
-  agentMode,
   agentPending,
   presetLabel,
-  onAgentModeChange,
   onPreset,
   onReset,
 }: Props) {
@@ -45,25 +39,9 @@ export function TerraScenarioControls({
         <div className="flex items-center gap-3 flex-wrap">
           {agentPending && (
             <span className="mono text-[10px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
-              reasoning…
+              agent reasoning…
             </span>
           )}
-          <div className="flex gap-0.5 p-0.5 rounded-[8px] bg-bg border border-border">
-            <ModeChip
-              active={agentMode === "deepseek"}
-              disabled={disabled}
-              onClick={() => onAgentModeChange("deepseek")}
-              icon={<Brain size={10} />}
-              label="Agent"
-            />
-            <ModeChip
-              active={agentMode === "rule"}
-              disabled={disabled}
-              onClick={() => onAgentModeChange("rule")}
-              icon={<Cog size={10} />}
-              label="Rules"
-            />
-          </div>
           <ShareLinkButton disabled={disabled} />
           <button
             className="btn"
@@ -81,7 +59,7 @@ export function TerraScenarioControls({
         <p className="text-xs text-fg-dim leading-relaxed mb-3">
           Each preset puts the vault in a state that matches a day of the actual
           Terra/Luna collapse. After loading a preset, try Mint or Redeem and
-          watch the failsafe agent decide.
+          watch the failsafe agent reason and decide.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
           {ORDER.map((key) => {
@@ -110,32 +88,5 @@ export function TerraScenarioControls({
         </div>
       </div>
     </div>
-  );
-}
-
-function ModeChip({
-  active,
-  disabled,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      className={`mono text-[11px] py-1 px-2.5 rounded-[6px] flex items-center gap-1.5 transition ${
-        active ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
-      }`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

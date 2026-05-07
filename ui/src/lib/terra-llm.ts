@@ -161,7 +161,6 @@ export async function decideTerra(input: TerraDecideInput): Promise<AgentVerdict
     decision,
     reason: (parsed.reason ?? "no reason given").slice(0, 200),
     reasoning: (parsed.reasoning ?? "no reasoning given").slice(0, 1000),
-    agent: "deepseek",
     latencyMs: Date.now() - t0,
     model: MODEL,
     prompt: { system: SYSTEM_PROMPT, user: userMessage },

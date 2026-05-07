@@ -15,8 +15,8 @@ import {
   UserPosition,
 } from "@/lib/types";
 import {
-  AgentMode,
   ScenarioState,
+  applyAgentEvent,
   applyDepthCollapse,
   applyHalt,
   applyLiveReadings,
@@ -31,7 +31,6 @@ import {
   deriveVenues,
   hashForReason,
   initialScenario,
-  setAgentMode,
 } from "@/lib/mock-scenario";
 import {
   AaveScenarioAction,
@@ -119,17 +118,13 @@ export default function HomePage() {
     scenario.liveBase.every((v) => !v.ok && v.error === "loading…");
 
   // ── URL state ─────────────────────────────────────────────────────────────
-  // Hydrate scenario + agent mode from ?scenario=…&agent=… on first paint.
-  // The scenario action runs as soon as venues are ready (otherwise overrides
-  // would write through to a referencePrice of 0).
+  // Hydrate scenario from ?scenario=… on first paint. The action runs as
+  // soon as venues are ready (otherwise overrides would write through to
+  // a referencePrice of 0).
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = readAaveUrl(window.location.search);
-    if (url.agentMode === "deepseek") {
-      setScenario((s) => setAgentMode(s, "deepseek"));
-    }
     if (url.scenario) pendingUrlScenarioRef.current = url.scenario;
-    // Run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,23 +134,24 @@ export default function HomePage() {
   const position = mode === "mock" ? scenario.position : livePosition;
 
   /**
-   * In Agent mode, every state-changing action triggers an LLM call.
-   * We optimistically attach the rule-based event so the user sees
-   * something immediately, then swap in the agent's verdict when it
-   * returns. We deliberately do NOT pass a scenario hint or framing —
-   * the agent has to reason from the venue readings alone.
+   * Every user action pushes a pending placeholder onto the timeline and
+   * issues a real LLM call. When the response lands we replace the head
+   * placeholder with the agent's verdict. On failure we mark the head
+   * REFUSED with an "agent unreachable" note — refusing is the safer
+   * default per the agent's own system prompt.
+   *
+   * We deliberately do NOT pass a scenario hint or framing — the agent
+   * has to reason from the venue readings alone.
    */
   const runWithAgent = useCallback(
     async (compute: (s: ScenarioState) => ScenarioState) => {
       const draft = compute(scenario);
       setScenario(draft);
 
-      if (draft.agentMode !== "deepseek") return;
-
-      setScenario((s) => ({ ...s, pending: true }));
-
       const venuesSnapshot = deriveVenues(draft);
+      const headBlock = draft.events[0]?.block;
       try {
+        // Skip past the new pending head when constructing recent context.
         const recent = draft.events.slice(1, 4);
         const res = await fetch("/api/agent/decide", {
           method: "POST",
@@ -172,32 +168,39 @@ export default function HomePage() {
         }
         const decision = await res.json();
 
-        setScenario((s) => {
-          if (s.events.length === 0) return { ...s, pending: false };
-          const head = s.events[0];
-          const replaced: TimelineEntry = {
-            block: head.block,
-            decision: decision.decision,
-            priceUsd: decision.priceUsd,
-            reason: decision.reason ?? head.reason,
-            reasonHash: hashForReason(decision.decision, decision.reason ?? ""),
-            reasoning: decision.reasoning,
-            inspect: {
-              venues: venuesSnapshot,
-              referencePrice: draft.referencePrice,
-              agent: "deepseek",
-              prompt: decision.prompt,
-              rawResponse: decision.rawResponse,
-              model: decision.model,
-              latencyMs: decision.latencyMs,
-            },
-          };
-          return { ...s, events: [replaced, ...s.events.slice(1)], pending: false };
-        });
+        const verdict: TimelineEntry = {
+          block: headBlock ?? draft.blockOffset,
+          decision: decision.decision,
+          priceUsd: decision.priceUsd,
+          reason: decision.reason,
+          reasonHash: hashForReason(decision.decision, decision.reason ?? ""),
+          reasoning: decision.reasoning,
+          inspect: {
+            venues: venuesSnapshot,
+            referencePrice: draft.referencePrice,
+            prompt: decision.prompt,
+            rawResponse: decision.rawResponse,
+            model: decision.model,
+            latencyMs: decision.latencyMs,
+          },
+        };
+        setScenario((s) => applyAgentEvent(s, verdict));
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.warn("[deepseek] decide failed; keeping rule-based event", msg);
-        setScenario((s) => ({ ...s, pending: false }));
+        console.warn("[agent] decide failed; refusing as safe default", msg);
+        const fallback: TimelineEntry = {
+          block: headBlock ?? draft.blockOffset,
+          decision: "REFUSED",
+          reason: "agent unreachable",
+          reasonHash: hashForReason("REFUSED", "agent unreachable"),
+          reasoning:
+            "The agent endpoint did not respond. Refusing is the safer default — better to halt the price feed briefly than to commit a value the agent never confirmed.",
+          inspect: {
+            venues: venuesSnapshot,
+            referencePrice: draft.referencePrice,
+          },
+        };
+        setScenario((s) => applyAgentEvent(s, fallback));
       }
     },
     [scenario],
@@ -269,21 +272,12 @@ export default function HomePage() {
     }
   };
 
-  const handleAgentModeChange = (m: AgentMode) => {
-    setScenario((s) => setAgentMode(s, m));
-  };
-
-  // Mirror state to URL whenever the scenario action or agent mode changes.
-  // No-op in live mode (URL is for shareable mock states).
+  // Mirror the last scenario action to the URL. No-op in live mode (URL
+  // is for shareable mock states).
   useEffect(() => {
     if (mode !== "mock") return;
-    replaceUrl(
-      writeAaveUrl({
-        scenario: lastScenario ?? undefined,
-        agentMode: scenario.agentMode,
-      }),
-    );
-  }, [lastScenario, scenario.agentMode, mode]);
+    replaceUrl(writeAaveUrl({ scenario: lastScenario ?? undefined }));
+  }, [lastScenario, mode]);
 
   // Apply pending URL scenario once venues are loaded. Single-shot — clears
   // the ref after apply.
@@ -355,9 +349,7 @@ export default function HomePage() {
               Object.values(scenario.overrides).some((v) => v !== undefined) ||
               Object.values(scenario.depthMultipliers).some((v) => v !== undefined)
             }
-            agentMode={scenario.agentMode}
             agentPending={scenario.pending}
-            onAgentModeChange={handleAgentModeChange}
             onPumpAll={handlePumpAll}
             onHaltToggle={handleHaltToggle}
             onResetAll={handleReset}
@@ -393,7 +385,6 @@ export default function HomePage() {
           <DecisionTimeline
             entries={timeline}
             loading={!timeline.length && (mode === "live" || venuesStillLoading)}
-            pending={mode === "mock" && scenario.pending}
           />
         </div>
 
@@ -454,13 +445,13 @@ function Header() {
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>
-          <span className="text-coral mr-1">1.</span>switch to <span className="text-fg">Agent</span> mode
+          <span className="text-coral mr-1">1.</span>pick a manipulation
         </li>
         <li>
-          <span className="text-coral mr-1">2.</span>pick a manipulation
+          <span className="text-coral mr-1">2.</span>watch the agent reason and decide
         </li>
         <li>
-          <span className="text-coral mr-1">3.</span>watch the agent reason
+          <span className="text-coral mr-1">3.</span>compare against the venue-quorum oracle
         </li>
       </ol>
     </header>
