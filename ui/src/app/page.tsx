@@ -13,10 +13,13 @@ import {
   UserPosition,
 } from "@/lib/types";
 import {
+  AgentMode,
   ScenarioState,
+  applyDepthCollapse,
   applyHalt,
   applyLiveReadings,
   applyPositionAction,
+  applyProportionalMove,
   applyPumpAll,
   applyReset,
   applyTamper,
@@ -25,6 +28,7 @@ import {
   deriveTimeline,
   deriveVenues,
   initialScenario,
+  setAgentMode,
 } from "@/lib/mock-scenario";
 
 export default function HomePage() {
@@ -98,54 +102,138 @@ export default function HomePage() {
   const timeline = mode === "mock" ? deriveTimeline(scenario) : liveTimeline;
   const position = mode === "mock" ? scenario.position : livePosition;
 
+  /**
+   * In DeepSeek mode, every state-changing action triggers an LLM call.
+   * We optimistically attach the rule-based event so the user sees
+   * something immediately, then swap in the LLM event when it returns.
+   * Scenario hint is propagated to the prompt for black-swan tests where
+   * the agent benefits from knowing the framing.
+   */
+  const runWithAgent = useCallback(
+    async (compute: (s: ScenarioState) => ScenarioState, scenarioHint?: string) => {
+      const draft = compute(scenario);
+      setScenario(draft);
+
+      if (draft.agentMode !== "deepseek") return;
+
+      setScenario((s) => ({ ...s, pending: true }));
+
+      try {
+        const venues = deriveVenues(draft);
+        const recent = draft.events.slice(1, 4);
+        const res = await fetch("/api/agent/decide", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            venues,
+            referencePrice: draft.referencePrice,
+            recentDecisions: recent,
+            scenario: scenarioHint,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error ?? `http ${res.status}`);
+        }
+        const decision = await res.json();
+
+        setScenario((s) => {
+          if (s.events.length === 0) return { ...s, pending: false };
+          const head = s.events[0];
+          const replaced: TimelineEntry = {
+            block: head.block,
+            decision: decision.decision,
+            priceUsd: decision.priceUsd,
+            reason: decision.reason ?? head.reason,
+            reasonHash: head.reasonHash,
+            reasoning:
+              `${decision.reasoning}\n\n— deepseek-chat · ${decision.latencyMs}ms`,
+          };
+          return { ...s, events: [replaced, ...s.events.slice(1)], pending: false };
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn("[deepseek] decide failed; keeping rule-based event", msg);
+        setScenario((s) => ({ ...s, pending: false }));
+      }
+    },
+    [scenario],
+  );
+
   const handleTamper = async (venue: VenueReading["venue"], priceUsd: number) => {
-    if (mode === "mock") {
-      setScenario((s) => applyTamper(s, venue, priceUsd));
-      return;
-    }
-    await fetch("/api/tamper", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ venue, priceUsd, runs: 3 }),
-    });
-    await refresh();
-  };
-
-  const handleReset = async () => {
-    if (mode === "mock") {
-      setScenario(applyReset);
-      return;
-    }
-    await fetch("/api/reset", { method: "POST" });
-    await refresh();
-  };
-
-  const handlePumpAll = async (priceUsd: number) => {
-    if (mode === "mock") {
-      setScenario((s) => applyPumpAll(s, priceUsd));
-      return;
-    }
-    // Live mode: no first-class "pump all" extrinsic; submit one tamper per venue.
-    for (const v of ["coinbase", "binance", "uniswap"] as const) {
+    if (mode === "live") {
       await fetch("/api/tamper", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ venue: v, priceUsd, runs: 3 }),
+        body: JSON.stringify({ venue, priceUsd, runs: 3 }),
       });
+      await refresh();
+      return;
     }
-    await refresh();
+    await runWithAgent((s) => applyTamper(s, venue, priceUsd));
+  };
+
+  const handleReset = async () => {
+    if (mode === "live") {
+      await fetch("/api/reset", { method: "POST" });
+      await refresh();
+      return;
+    }
+    await runWithAgent(applyReset);
+  };
+
+  const handlePumpAll = async (priceUsd: number) => {
+    if (mode === "live") {
+      for (const v of ["coinbase", "binance", "uniswap"] as const) {
+        await fetch("/api/tamper", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ venue: v, priceUsd, runs: 3 }),
+        });
+      }
+      await refresh();
+      return;
+    }
+    await runWithAgent(
+      (s) => applyPumpAll(s, priceUsd),
+      `User pumped all 3 venues to $${priceUsd}. Reason about exitability vs the cached reference.`,
+    );
   };
 
   const handleHaltToggle = async (venue: VenueReading["venue"]) => {
-    if (mode === "mock") {
-      setScenario((s) =>
-        s.halted[venue] ? applyUnhalt(s, venue) : applyHalt(s, venue),
-      );
+    if (mode === "live") {
+      console.warn("[halt] live mode not yet wired");
       return;
     }
-    // Live mode: halt is a runtime concept the tool-executor would surface
-    // via a separate pallet / context-event channel. Stub for now.
-    console.warn("[halt] live mode not yet wired");
+    await runWithAgent((s) =>
+      s.halted[venue] ? applyUnhalt(s, venue) : applyHalt(s, venue),
+    );
+  };
+
+  // Black-swan scenario presets. Each frames the agent's input with a hint
+  // so the model can reason in context (vs. having to infer the framing
+  // from raw numbers alone).
+  const handleBlackSwan = async (kind: "depth-collapse" | "subtle-pump" | "flash-crash") => {
+    if (kind === "depth-collapse") {
+      await runWithAgent(
+        (s) => applyDepthCollapse(s, 0.05),
+        "User collapsed depth to 5% of normal across all venues. Prices unchanged. Reason about exitability — can a $100M position exit at the quoted price with this depth?",
+      );
+    } else if (kind === "subtle-pump") {
+      await runWithAgent(
+        (s) => applyProportionalMove(s, 1.49),
+        "User pumped all 3 venues by 49% — just under the 50% baseline-deviation rule threshold. Numerical divergence remains zero. A rule-based agent priced this. Reason whether you should.",
+      );
+    } else if (kind === "flash-crash") {
+      await runWithAgent(
+        (s) => applyProportionalMove(s, 0.7),
+        "Genuine ETH flash crash: all venues dropped 30% in seconds. Volume across all venues spiked but the move itself is real. Reason whether to price this — false-positives on real market events would also hurt the protocol.",
+      );
+    }
+  };
+
+  const handleAgentModeChange = (m: AgentMode) => {
+    setScenario((s) => setAgentMode(s, m));
   };
 
   const handleAction = async (
@@ -199,10 +287,17 @@ export default function HomePage() {
                 (v) => scenario.halted[v],
               )
             }
-            anyOverride={Object.values(scenario.overrides).some((v) => v !== undefined)}
+            anyOverride={
+              Object.values(scenario.overrides).some((v) => v !== undefined) ||
+              Object.values(scenario.depthMultipliers).some((v) => v !== undefined)
+            }
+            agentMode={scenario.agentMode}
+            agentPending={scenario.pending}
+            onAgentModeChange={handleAgentModeChange}
             onPumpAll={handlePumpAll}
             onHaltToggle={handleHaltToggle}
             onResetAll={handleReset}
+            onBlackSwan={handleBlackSwan}
           />
         )}
 

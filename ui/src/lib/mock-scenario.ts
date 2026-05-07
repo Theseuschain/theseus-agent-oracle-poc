@@ -29,9 +29,18 @@ import {
 
 type Venue = VenueReading["venue"];
 
+export type AgentMode = "rule" | "deepseek";
+
+/** Per-venue depth multiplier. 1.0 = unmodified. 0.05 = 95% depth collapse. */
+export type DepthMultipliers = Partial<Record<Venue, number>>;
+
 export interface ScenarioState {
+  /** Which agent is making the decisions. */
+  agentMode: AgentMode;
   /** Per-venue price overrides. */
   overrides: Partial<Record<Venue, number>>;
+  /** Per-venue depth multipliers (used by depth-collapse scenarios). */
+  depthMultipliers: DepthMultipliers;
   /** Venues marked stale by an injected halt event. */
   halted: Partial<Record<Venue, true>>;
   /** Most recent live readings from /api/venues. Used as the base values
@@ -47,6 +56,8 @@ export interface ScenarioState {
   blockOffset: number;
   /** Refused/priced events the user has caused. Newest first. */
   events: TimelineEntry[];
+  /** True while a DeepSeek call is in flight. */
+  pending: boolean;
 }
 
 const DEFAULT_BASE: VenueReading[] = [
@@ -56,12 +67,15 @@ const DEFAULT_BASE: VenueReading[] = [
 ];
 
 export const initialScenario = (): ScenarioState => ({
+  agentMode: "rule",
   overrides: {},
+  depthMultipliers: {},
   halted: {},
   liveBase: DEFAULT_BASE,
   referencePrice: 0, // populated on first /api/venues poll
   blockOffset: 0,
   events: [],
+  pending: false,
   position: {
     collateralWeth: 0,
     collateralUsd: 0,
@@ -106,6 +120,7 @@ export function deriveVenues(state: ScenarioState): VenueReading[] {
     const v = base.venue;
     const halted = !!state.halted[v];
     const override = state.overrides[v];
+    const depthMul = state.depthMultipliers[v];
     if (halted) {
       return {
         ...base,
@@ -114,10 +129,14 @@ export function deriveVenues(state: ScenarioState): VenueReading[] {
         ageSeconds: Math.max(base.ageSeconds, 60),
       };
     }
+    let r: VenueReading = base;
     if (override !== undefined) {
-      return { ...base, priceUsd: override, ok: true, tampered: true, error: undefined };
+      r = { ...r, priceUsd: override, ok: true, tampered: true, error: undefined };
     }
-    return base;
+    if (depthMul !== undefined) {
+      r = { ...r, depthUsd: r.depthUsd * depthMul, tampered: true };
+    }
+    return r;
   });
 }
 
@@ -229,8 +248,36 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
 }
 
 export function deriveFeed(state: ScenarioState): FeedSnapshot {
-  const a = analyze(state);
   const block = currentBlock(state.blockOffset);
+
+  // After the first user-triggered action, the head event is authoritative —
+  // it carries either the rule-based or the DeepSeek decision (DeepSeek
+  // having replaced the rule event when it returned). The feed reflects it.
+  if (state.events.length > 0) {
+    const head = state.events[0];
+    if (head.decision === "REFUSED") {
+      return {
+        decision: "REFUSED",
+        priceUsd: 0,
+        updatedAt: nowSec() - 5,
+        block,
+        reasonHash: head.reasonHash ?? PRICED_HASH,
+        ageSeconds: 5,
+      };
+    }
+    return {
+      decision: "PRICED",
+      priceUsd: head.priceUsd ?? 0,
+      updatedAt: nowSec() - 12,
+      block,
+      reasonHash: PRICED_HASH,
+      ageSeconds: 12,
+    };
+  }
+
+  // First paint — fall back to a synchronous rule-based read so the feed
+  // shows a price from the live venues immediately.
+  const a = analyze(state);
   if (a.decision === "REFUSED") {
     return {
       decision: "REFUSED",
@@ -352,7 +399,67 @@ export function applyReset(state: ScenarioState): ScenarioState {
   const next: ScenarioState = {
     ...state,
     overrides: {},
+    depthMultipliers: {},
     halted: {},
+    blockOffset: state.blockOffset + 1,
+  };
+  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+}
+
+export function setAgentMode(state: ScenarioState, mode: AgentMode): ScenarioState {
+  return { ...state, agentMode: mode };
+}
+
+export function setPending(state: ScenarioState, pending: boolean): ScenarioState {
+  return { ...state, pending };
+}
+
+/** Apply a parsed LLM decision to the scenario as a new timeline event,
+ *  but without further mutating overrides — those are still controlled by
+ *  the existing tamper/halt actions that triggered the decision. */
+export function applyLLMEvent(
+  state: ScenarioState,
+  event: TimelineEntry,
+): ScenarioState {
+  return {
+    ...state,
+    events: [event, ...state.events].slice(0, 20),
+    pending: false,
+  };
+}
+
+/** Parametric scenario constructors used by the demo's "black-swan" buttons.
+ *  Each builds a multiplicative override on top of the live base readings,
+ *  so the resulting state is grounded in the actual current ETH price. */
+export function applyDepthCollapse(
+  state: ScenarioState,
+  factor: number, // e.g. 0.05 = depth drops to 5% of normal
+): ScenarioState {
+  const next: ScenarioState = {
+    ...state,
+    depthMultipliers: { coinbase: factor, binance: factor, uniswap: factor },
+    blockOffset: state.blockOffset + 1,
+  };
+  return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
+}
+
+/** Pump every venue by the same multiplier, holding depth constant. Used for
+ *  "just-under-threshold" and "real flash crash" scenarios. The agent has to
+ *  reason about whether the move is plausible given the depth that didn't
+ *  follow it. */
+export function applyProportionalMove(
+  state: ScenarioState,
+  multiplier: number,
+): ScenarioState {
+  const validBase = state.liveBase.filter((r) => r.ok);
+  if (validBase.length === 0) return state;
+  const overrides: Partial<Record<Venue, number>> = {};
+  for (const v of validBase) {
+    overrides[v.venue] = v.priceUsd * multiplier;
+  }
+  const next: ScenarioState = {
+    ...state,
+    overrides,
     blockOffset: state.blockOffset + 1,
   };
   return { ...next, events: [recordEvent(next), ...state.events].slice(0, 20) };
