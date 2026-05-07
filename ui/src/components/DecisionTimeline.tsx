@@ -135,23 +135,44 @@ function TimelineRow({
               )}
             </div>
           )}
-          {isPending && (
+          {isPending && !e.reasoning && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-mute italic">
-              The agent is reading the venues and reconciling. Verdict in a moment.
+              The agent is reading the venues and reconciling…
             </div>
           )}
-          {oneLiner && (
+          {isPending && e.reasoning && (
+            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim">
+              <span className="italic">{e.reasoning}</span>
+              <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+            </div>
+          )}
+          {!isPending && oneLiner && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
               &ldquo;{oneLiner}&rdquo;
             </div>
           )}
           {cf && (
-            <CounterfactualBadge
-              altLabel="venue-quorum oracle (Chainlink shape)"
-              summary={cf.costSummary}
-              severity={cf.severity}
-              divergesFromAgent={cf.divergesFromAgent}
-            />
+            <>
+              <CounterfactualBadge
+                altLabel="venue-quorum oracle (Chainlink shape)"
+                summary={cf.costSummary}
+                severity={cf.severity}
+                divergesFromAgent={cf.divergesFromAgent}
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-fg-dim">
+                On Theseus, this entire reasoning bundle is signed and
+                verifiable. You don&rsquo;t have to trust the operator —{" "}
+                <a
+                  href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-coral hover:underline"
+                >
+                  check the proof
+                </a>
+                .
+              </p>
+            </>
           )}
           {!isPending && (
             <div className="flex items-baseline gap-3 mt-2 flex-wrap">

@@ -31,6 +31,7 @@ import {
   deriveVenues,
   hashForReason,
   initialScenario,
+  setPendingReasoning,
 } from "@/lib/mock-scenario";
 import {
   AaveScenarioAction,
@@ -162,26 +163,68 @@ export default function HomePage() {
             recentDecisions: recent,
           }),
         });
-        if (!res.ok) {
+        if (!res.ok || !res.body) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error ?? `http ${res.status}`);
         }
-        const decision = await res.json();
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let final: {
+          decision: "PRICED" | "REFUSED";
+          priceUsd?: number;
+          reason: string;
+          reasoning: string;
+          latencyMs?: number;
+          model?: string;
+          prompt?: { system: string; user: string };
+          rawResponse?: string;
+        } | null = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const events = buf.split("\n\n");
+          buf = events.pop() ?? "";
+          for (const evt of events) {
+            for (const line of evt.split("\n")) {
+              if (!line.startsWith("data:")) continue;
+              const data = line.slice(5).trim();
+              if (!data) continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.type === "reasoning" && typeof parsed.text === "string") {
+                  setScenario((s) => setPendingReasoning(s, parsed.text));
+                } else if (parsed.type === "final" && parsed.output) {
+                  final = parsed.output;
+                } else if (parsed.type === "error") {
+                  throw new Error(parsed.error ?? "stream error");
+                }
+              } catch {
+                /* ignore malformed line */
+              }
+            }
+          }
+        }
+
+        if (!final) throw new Error("stream ended without final verdict");
 
         const verdict: TimelineEntry = {
           block: headBlock ?? draft.blockOffset,
-          decision: decision.decision,
-          priceUsd: decision.priceUsd,
-          reason: decision.reason,
-          reasonHash: hashForReason(decision.decision, decision.reason ?? ""),
-          reasoning: decision.reasoning,
+          decision: final.decision,
+          priceUsd: final.priceUsd,
+          reason: final.reason,
+          reasonHash: hashForReason(final.decision, final.reason ?? ""),
+          reasoning: final.reasoning,
           inspect: {
             venues: venuesSnapshot,
             referencePrice: draft.referencePrice,
-            prompt: decision.prompt,
-            rawResponse: decision.rawResponse,
-            model: decision.model,
-            latencyMs: decision.latencyMs,
+            prompt: final.prompt,
+            rawResponse: final.rawResponse,
+            model: final.model,
+            latencyMs: final.latencyMs,
           },
         };
         setScenario((s) => applyAgentEvent(s, verdict));
@@ -388,19 +431,19 @@ export default function HomePage() {
           />
         </div>
 
-        <details className="mb-4">
-          <summary className="cursor-pointer mono text-[11px] uppercase tracking-wider text-fg-mute hover:text-fg list-none flex items-center gap-2">
-            <span className="inline-block w-2.5 h-2.5 border-r border-b border-current rotate-[-45deg] details-arrow"></span>
-            Aave position (connect a wallet)
-          </summary>
-          <div className="mt-3">
-            <PositionPanel
-              position={position}
-              feedRefused={refused && !venuesStillLoading}
-              onAction={handleAction}
-            />
-          </div>
-        </details>
+        <div className="mb-4 mt-6">
+          <div className="eyebrow mb-2">Aave position (the protocol the oracle prices for)</div>
+          <p className="text-xs text-fg-mute mb-3">
+            When the agent refuses, the borrow path on this position reverts. The
+            user keeps their tokens; the protocol doesn&rsquo;t open a position
+            against a price the agent never confirmed.
+          </p>
+          <PositionPanel
+            position={position}
+            feedRefused={refused && !venuesStillLoading}
+            onAction={handleAction}
+          />
+        </div>
 
         <Footer />
         </div>

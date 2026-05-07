@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decide, AgentDecisionInput } from "@/lib/agent-llm";
+import { decideStream, AgentDecisionInput } from "@/lib/agent-llm";
+import { sse } from "@/lib/llm-stream";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 35; // seconds — DeepSeek call takes 2-10s typically
+export const maxDuration = 35;
+// Force Node.js runtime (not Edge) — DeepSeek SSE iteration uses async
+// generators that work fine here, and the streaming Response hands the
+// body straight to the client.
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   if (!process.env.DEEPSEEK_API_KEY) {
@@ -26,11 +31,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const out = await decide(input);
-    return NextResponse.json(out);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 502 });
-  }
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      try {
+        for await (const event of decideStream(input)) {
+          controller.enqueue(encoder.encode(sse(event)));
+        }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        controller.enqueue(encoder.encode(sse({ type: "error", error: msg })));
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }

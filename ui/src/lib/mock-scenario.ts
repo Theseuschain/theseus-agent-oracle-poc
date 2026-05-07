@@ -348,6 +348,20 @@ export function setPending(state: ScenarioState, pending: boolean): ScenarioStat
   return { ...state, pending };
 }
 
+/** Update the streaming reasoning text on the head pending event so the
+ *  user sees the agent thinking live. No-op if the head isn't pending. */
+export function setPendingReasoning(
+  state: ScenarioState,
+  reasoning: string,
+): ScenarioState {
+  if (state.events.length === 0 || !state.events[0].pending) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, reasoning }, ...state.events.slice(1)],
+  };
+}
+
 /** Replace the pending head event with the agent's verdict. If for some
  *  reason there's no pending head, prepend the verdict. */
 export function applyAgentEvent(

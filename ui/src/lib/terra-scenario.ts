@@ -43,6 +43,10 @@ export interface TimelineEntry {
   /** Undefined while the agent is reasoning; filled in when the LLM responds. */
   verdict?: AgentVerdict;
   pending?: boolean;
+  /** Live partial reasoning text streamed from the LLM. Cleared when
+   *  verdict lands. Renderers display this in place of the verdict's
+   *  reasoning while the agent is still thinking. */
+  streamingReasoning?: string;
   vaultSnapshot: VaultState;
   scenarioLabel?: string;
 }
@@ -184,6 +188,7 @@ export function applyAgentVerdict(
     ...head,
     pending: false,
     verdict,
+    streamingReasoning: undefined,
   };
 
   let nextVault = state.vault;
@@ -226,4 +231,20 @@ export function applyPreset(
 
 export function setTerraPending(state: TerraScenarioState, pending: boolean): TerraScenarioState {
   return { ...state, pending };
+}
+
+/** Update the streaming reasoning on the head pending entry. */
+export function setTerraPendingReasoning(
+  state: TerraScenarioState,
+  reasoning: string,
+): TerraScenarioState {
+  if (state.events.length === 0 || !state.events[0].pending) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [
+      { ...head, streamingReasoning: reasoning },
+      ...state.events.slice(1),
+    ],
+  };
 }

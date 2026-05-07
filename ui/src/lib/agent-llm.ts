@@ -17,6 +17,10 @@
  */
 
 import { Decision, TimelineEntry, VenueReading } from "./types";
+import {
+  extractPartialReasoning,
+  readDeepSeekStream,
+} from "./llm-stream";
 
 export interface AgentDecisionInput {
   venues: VenueReading[];
@@ -204,5 +208,100 @@ export async function decide(
     model: MODEL,
     prompt: { system: SYSTEM_PROMPT, user: userMessage },
     rawResponse: content,
+  };
+}
+
+export type AgentDecisionStreamEvent =
+  | { type: "reasoning"; text: string }
+  | { type: "final"; output: AgentDecisionOutput };
+
+/** Streaming variant of decide(). Yields partial reasoning text as
+ *  DeepSeek emits the JSON, then a final structured verdict. The
+ *  consumer (an SSE route handler) forwards these to the browser. */
+export async function* decideStream(
+  input: AgentDecisionInput,
+): AsyncGenerator<AgentDecisionStreamEvent, void> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error("DEEPSEEK_API_KEY not configured");
+
+  const userMessage = buildUserMessage(input);
+  const t0 = Date.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+
+  let lastReasoning: string | undefined;
+  let finalContent = "";
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.2,
+        stream: true,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
+      }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok || !res.body) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`deepseek http ${res.status}: ${errText.slice(0, 200)}`);
+    }
+    for await (const content of readDeepSeekStream(res.body)) {
+      finalContent = content;
+      const partial = extractPartialReasoning(content);
+      if (partial !== undefined && partial !== lastReasoning) {
+        lastReasoning = partial;
+        yield { type: "reasoning", text: partial };
+      }
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!finalContent) throw new Error("deepseek: empty stream");
+
+  let parsed: ParsedDecision;
+  try {
+    parsed = JSON.parse(finalContent) as ParsedDecision;
+  } catch {
+    throw new Error(`deepseek: non-JSON content: ${finalContent.slice(0, 200)}`);
+  }
+
+  const decision: Decision =
+    parsed.decision === "PRICED"
+      ? "PRICED"
+      : parsed.decision === "REFUSED"
+        ? "REFUSED"
+        : "REFUSED";
+
+  let priceUsd: number | undefined;
+  if (decision === "PRICED") {
+    const raw = parsed.price_usd;
+    const n = typeof raw === "string" ? parseFloat(raw) : raw;
+    if (typeof n === "number" && Number.isFinite(n) && n > 0) {
+      priceUsd = n;
+    }
+  }
+
+  yield {
+    type: "final",
+    output: {
+      decision,
+      priceUsd,
+      reason: (parsed.reason ?? "no reason given").slice(0, 200),
+      reasoning: (parsed.reasoning ?? "no reasoning given").slice(0, 1000),
+      latencyMs: Date.now() - t0,
+      model: MODEL,
+      prompt: { system: SYSTEM_PROMPT, user: userMessage },
+      rawResponse: finalContent,
+    },
   };
 }

@@ -17,6 +17,7 @@ import {
   applyPreset,
   initialTerraScenario,
   setTerraPending,
+  setTerraPendingReasoning,
 } from "@/lib/terra-scenario";
 import {
   readTerraUrl,
@@ -76,12 +77,45 @@ export default function TerraPage() {
             recentVerdicts,
           }),
         });
-        if (!res.ok) {
+        if (!res.ok || !res.body) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error ?? `http ${res.status}`);
         }
-        const verdict = (await res.json()) as AgentVerdict;
-        setScenario((s) => applyAgentVerdict(s, verdict));
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let finalVerdict: AgentVerdict | null = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const events = buf.split("\n\n");
+          buf = events.pop() ?? "";
+          for (const evt of events) {
+            for (const line of evt.split("\n")) {
+              if (!line.startsWith("data:")) continue;
+              const data = line.slice(5).trim();
+              if (!data) continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.type === "reasoning" && typeof parsed.text === "string") {
+                  setScenario((s) => setTerraPendingReasoning(s, parsed.text));
+                } else if (parsed.type === "final" && parsed.output) {
+                  finalVerdict = parsed.output as AgentVerdict;
+                } else if (parsed.type === "error") {
+                  throw new Error(parsed.error ?? "stream error");
+                }
+              } catch {
+                /* ignore malformed line */
+              }
+            }
+          }
+        }
+
+        if (!finalVerdict) throw new Error("stream ended without final verdict");
+        setScenario((s) => applyAgentVerdict(s, finalVerdict!));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.warn("[terra] decide failed; refusing as safe default", msg);

@@ -106,23 +106,44 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
           {entry.verdict && (
             <div className="mono text-sm text-fg-dim mt-0.5 break-words">{entry.verdict.reason}</div>
           )}
-          {isPending && (
+          {isPending && !entry.streamingReasoning && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-mute italic">
-              The agent is reading the vault metrics. Verdict in a moment.
+              The agent is reading the vault metrics…
             </div>
           )}
-          {oneLiner && (
+          {isPending && entry.streamingReasoning && (
+            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim">
+              <span className="italic">{entry.streamingReasoning}</span>
+              <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
+            </div>
+          )}
+          {!isPending && oneLiner && (
             <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
               &ldquo;{oneLiner}&rdquo;
             </div>
           )}
           {cf && (
-            <CounterfactualBadge
-              altLabel="naive contract (no failsafe)"
-              summary={cf.costSummary}
-              severity={cf.severity}
-              divergesFromAgent={cf.divergesFromAgent}
-            />
+            <>
+              <CounterfactualBadge
+                altLabel="naive contract (no failsafe)"
+                summary={cf.costSummary}
+                severity={cf.severity}
+                divergesFromAgent={cf.divergesFromAgent}
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-fg-dim">
+                On Theseus, this entire reasoning bundle is signed and
+                verifiable. You don&rsquo;t have to trust the operator —{" "}
+                <a
+                  href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-coral hover:underline"
+                >
+                  check the proof
+                </a>
+                .
+              </p>
+            </>
           )}
           {entry.verdict && (
             <div className="flex items-baseline gap-3 mt-2 flex-wrap">
