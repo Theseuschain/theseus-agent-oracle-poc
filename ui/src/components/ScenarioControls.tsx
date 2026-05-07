@@ -95,7 +95,7 @@ export function ScenarioControls({
         <div className="rounded-[10px] bg-surface-2 border border-border p-4 space-y-3">
           <div className="eyebrow">Manipulation</div>
 
-          {/* Pump all venues */}
+          {/* Pump all venues — Mango Markets shape */}
           {pumpOpen ? (
             <form
               className="flex gap-2"
@@ -130,18 +130,28 @@ export function ScenarioControls({
             </form>
           ) : (
             <button
-              className="btn btn-primary w-full justify-center"
+              className="rounded-[8px] bg-coral text-bg hover:bg-[#ff7558] disabled:opacity-50 transition px-3 py-2.5 text-left w-full"
               onClick={() => setPumpOpen(true)}
               disabled={disabled}
-              title="Set every venue's price to the same fake value (Mango shape)"
+              title="Pump all three venues to the same fake price"
             >
-              <Zap size={13} /> Pump all venues
+              <div className="flex items-center gap-2 mono text-[11px] uppercase tracking-wider">
+                <Zap size={12} /> Pump all venues
+              </div>
+              <div className="mono text-[10px] opacity-75 mt-0.5">
+                the Mango Markets shape (2022, $116M)
+              </div>
             </button>
           )}
 
           {/* Halt toggles */}
           <div>
-            <div className="mono text-[10px] text-fg-mute mb-1.5">Halt a venue</div>
+            <div className="mono text-[10px] uppercase tracking-wider text-fg mb-0.5 flex items-center gap-2">
+              <Power size={12} /> Halt a venue
+            </div>
+            <div className="mono text-[10px] text-fg-mute mb-2">
+              simulate an exchange suspending trading
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {VENUES.map((v) => {
                 const halted = haltedSet.has(v);
