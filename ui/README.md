@@ -63,4 +63,17 @@ Until those land, mock mode demonstrates the *shape* of the demo: identical UX, 
 
 ## Deploying
 
-This UI is a normal Next.js app — Vercel works out of the box. Set the env vars from `.env.example`, point at your deployed contracts and chain, and ship. A subdomain like `agent-oracle.theseus.network` is the natural home.
+Standard Next.js app. Vercel works out of the box.
+
+### Vercel + custom subdomain
+
+1. Import the repo in Vercel; set **Root Directory** to `ui`.
+2. Set env vars from `.env.example`. `DEEPSEEK_API_KEY` should be marked **Sensitive**. Mock-mode runs with zero env vars.
+3. Project → **Settings → Domains** → Add `agent-oracle.theseus.network`.
+4. Vercel shows a CNAME target (e.g. `cname.vercel-dns.com`). Add this DNS record at your registrar:
+   ```
+   agent-oracle.theseus.network.  CNAME  cname.vercel-dns.com.
+   ```
+5. Wait for DNS propagation (typically <5 min). Vercel auto-provisions a Let's Encrypt cert.
+
+The canonical URL once configured: <https://agent-oracle.theseus.network>.

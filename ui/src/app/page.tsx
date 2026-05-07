@@ -291,9 +291,11 @@ export default function HomePage() {
   const refused = feed?.decision === "REFUSED";
 
   return (
-    <main className="min-h-screen px-4 md:px-8 py-8">
-      <div className="max-w-7xl mx-auto">
-        <Header mode={mode} />
+    <>
+      <TopBar mode={mode} />
+      <main className="min-h-screen px-4 md:px-8 pb-12">
+        <div className="max-w-7xl mx-auto pt-8">
+        <Header />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           <FeedPanel feed={feed} loading={!feed || venuesStillLoading} />
@@ -348,31 +350,78 @@ export default function HomePage() {
         </div>
 
         <Footer />
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }
 
-function Header({ mode }: { mode: "live" | "mock" }) {
+function TopBar({ mode }: { mode: "live" | "mock" }) {
   return (
-    <header className="mb-8 md:mb-10 flex items-start justify-between gap-4">
-      <div>
-        <div className="eyebrow mb-2">Live demo</div>
-        <h1 className="serif text-3xl md:text-4xl tracking-tight mb-2">
-          Theseus Agent Oracle
-        </h1>
-        <p className="text-fg-dim text-sm md:text-base max-w-2xl">
-          Aave V3, unmodified. The price oracle is a Theseus agent reading
-          Coinbase, Binance, and a Uniswap V3 pool directly. When the venues
-          disagree, the agent refuses to price, and Aave&apos;s price-touching
-          paths revert with it.
-        </p>
+    <div className="border-b border-border bg-bg/70 backdrop-blur-sm sticky top-0 z-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+        <a
+          href="https://theseus.network"
+          className="flex items-baseline gap-2 group"
+          aria-label="theseus.network"
+        >
+          <span className="serif text-lg group-hover:text-coral transition">
+            Theseus
+          </span>
+          <span className="text-fg-mute mono text-xs">/</span>
+          <span className="mono text-[11px] uppercase tracking-wider text-fg-dim">
+            agent oracle
+          </span>
+        </a>
+        <div className="flex items-center gap-4">
+          <span
+            className={`badge ${mode === "live" ? "badge-priced" : "badge-stale"} hidden sm:inline-flex`}
+          >
+            {mode === "live" ? "live chain" : "mock data"}
+          </span>
+          <a
+            href="https://theseus.network/docs"
+            className="mono text-[11px] text-fg-dim hover:text-fg hidden md:inline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            docs
+          </a>
+          <a
+            href="https://github.com/Theseuschain/theseus-agent-oracle-poc"
+            className="mono text-[11px] text-fg-dim hover:text-fg"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            github
+          </a>
+          <a
+            href="https://theseus.network"
+            className="mono text-[11px] text-fg-dim hover:text-coral"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            theseus.network ↗
+          </a>
+        </div>
       </div>
-      <div className="hidden sm:block">
-        <span className={`badge ${mode === "live" ? "badge-priced" : "badge-stale"}`}>
-          {mode === "live" ? "live chain" : "mock data"}
-        </span>
-      </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="mb-8 md:mb-10">
+      <div className="eyebrow mb-2">Live demo</div>
+      <h1 className="serif text-3xl md:text-4xl tracking-tight mb-2">
+        Theseus Agent Oracle
+      </h1>
+      <p className="text-fg-dim text-sm md:text-base max-w-2xl">
+        Aave V3, unmodified. The price oracle is a Theseus agent reading
+        Coinbase, Binance, and a Uniswap V3 pool directly. When the venues
+        disagree, the agent refuses to price, and Aave&apos;s price-touching
+        paths revert with it.
+      </p>
     </header>
   );
 }
