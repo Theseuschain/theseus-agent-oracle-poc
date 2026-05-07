@@ -86,13 +86,23 @@ export const initialScenario = (): ScenarioState => ({
   },
 });
 
-const PRICED_HASH = `0x${"0".repeat(64)}`;
-const REFUSED_HASH_DIVERGENCE =
+export const PRICED_HASH = `0x${"0".repeat(64)}`;
+export const REFUSED_HASH_DIVERGENCE =
   "0x8a3f7b2c4d5e6f819203a4b5c6d7e8f90123456789abcdef0123456789abcdef";
-const REFUSED_HASH_EXITABILITY =
+export const REFUSED_HASH_EXITABILITY =
   "0xb7e2c9f1a4d6e8093215c4d7e8f901234abcdef56789012345678901234abcdef";
-const REFUSED_HASH_HALT =
+export const REFUSED_HASH_HALT =
   "0xc1d4e7a0b3f6c8092145c7d8e9f01234567890abcdef0123456789abcdef0123";
+
+/** Map a refusal reason string to one of the canonical refusal hashes.
+ *  Used when an LLM decision needs an on-chain-shaped hash to display. */
+export function hashForReason(decision: "PRICED" | "REFUSED", reason: string): string {
+  if (decision === "PRICED") return PRICED_HASH;
+  const r = reason.toLowerCase();
+  if (/exitability|mango|depth/.test(r)) return REFUSED_HASH_EXITABILITY;
+  if (/insufficient|halt|stale/.test(r)) return REFUSED_HASH_HALT;
+  return REFUSED_HASH_DIVERGENCE;
+}
 
 const VENUE_LABEL: Record<Venue, string> = {
   coinbase: "Coinbase",
@@ -158,7 +168,7 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
   const valid = venues.filter((v) => v.ok);
   const haltedVenues = venues.filter((v) => !v.ok);
 
-  // Rule 1 — insufficient venues (context-derived staleness)
+  // Rule 1: insufficient venues (context-derived staleness)
   if (valid.length < 2) {
     const haltedNames = haltedVenues.map((v) => VENUE_LABEL[v.venue]).join(", ");
     return {
@@ -167,7 +177,7 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
       reasonHash: REFUSED_HASH_HALT,
       reasoning: [
         `${haltedNames} ${haltedVenues.length === 1 ? "is" : "are"} reporting halted trading via off-chain status events.`,
-        `That leaves ${valid.length} active venue${valid.length === 1 ? "" : "s"} — below the policy minimum of 2 independent reads.`,
+        `That leaves ${valid.length} active venue${valid.length === 1 ? "" : "s"}, below the policy minimum of 2 independent reads.`,
         `A smart contract using a stale Chainlink feed would have no signal that an exchange has halted; the feed keeps reporting whatever was last submitted.`,
         `Refusing until at least 2 venues recover.`,
       ].join(" "),
@@ -199,9 +209,9 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
         reason: `exitability: ${moveX}x move with insufficient real depth`,
         reasonHash: REFUSED_HASH_EXITABILITY,
         reasoning: [
-          `All ${valid.length} active venues report ~$${median.toFixed(0)} — they all moved together to the same level (zero numerical divergence between feeds).`,
-          `A naïve venue-quorum oracle would price this.`,
-          `But cumulative depth across these venues is ${reportedDepthFmt}, unchanged from the pre-move baseline (~$${state.referencePrice.toFixed(0)}). Real liquidity doesn't materialize at synthetic prices — if a $100M position were liquidated at $${median.toFixed(0)}, it would clear the entire visible book.`,
+          `All ${valid.length} active venues report ~$${median.toFixed(0)}, sitting at the same level (zero numerical divergence between feeds).`,
+          `A venue-quorum oracle would price this.`,
+          `But cumulative depth across these venues is ${reportedDepthFmt}, unchanged from the pre-move baseline (~$${state.referencePrice.toFixed(0)}). Real liquidity doesn't materialize at synthetic prices. A $100M liquidation at $${median.toFixed(0)} would clear the entire visible book.`,
           `This pattern matches Mango Markets (Oct 2022, $116M) and Bybit MNGO (2023): a coordinated mark-pump where every reporting venue was the same shallow pool.`,
           `A smart contract reading three Chainlink feeds that all agree has no rule to fire here. Refusing.`,
         ].join(" "),
@@ -233,8 +243,8 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
       reason: reasonShort,
       reasonHash: REFUSED_HASH_DIVERGENCE,
       reasoning: [
-        `${VENUE_LABEL[worst.venue]} reports $${worst.priceUsd.toFixed(2)}; ${VENUE_LABEL[reference.venue]} reports $${reference.priceUsd.toFixed(2)} — divergence of ${direction}, far above the 50bps policy threshold.`,
-        `Cross-venue spreads on ETH/USD normally sit at single-digit bps; this size of disagreement is the signature of a flash-loan-manipulated AMM or a thin-book pump on a single venue.`,
+        `${VENUE_LABEL[worst.venue]} reports $${worst.priceUsd.toFixed(2)}, ${VENUE_LABEL[reference.venue]} reports $${reference.priceUsd.toFixed(2)}. That is a divergence of ${direction}, far above the 50bps policy threshold.`,
+        `Cross-venue spreads on ETH/USD normally sit at single-digit bps. Disagreement at this scale is the signature of a flash-loan-manipulated AMM or a thin-book pump on a single venue.`,
         `Refusing until the readings reconcile.`,
       ].join(" "),
       maxDeviationBps: maxDev * 10000,

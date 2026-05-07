@@ -134,17 +134,17 @@ function TimelineRow({
 }
 
 function AgentTag({ agent }: { agent: AgentInspect["agent"] }) {
-  const isDeepSeek = agent === "deepseek";
+  const isAgent = agent === "deepseek";
   return (
     <span
       className={`mono text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded ${
-        isDeepSeek
+        isAgent
           ? "text-coral border border-coral/30 bg-coral/5"
           : "text-fg-mute border border-border bg-surface-2"
       }`}
     >
-      {isDeepSeek ? <Brain size={9} /> : <Cog size={9} />}
-      {isDeepSeek ? "deepseek" : "rule"}
+      {isAgent ? <Brain size={9} /> : <Cog size={9} />}
+      {isAgent ? "agent" : "rules"}
     </span>
   );
 }

@@ -8,7 +8,7 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrai
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
-  title: "Theseus Agent Oracle — live demo",
+  title: "Theseus Agent Oracle",
   description:
     "Aave V3, unmodified. The price oracle is a Theseus agent. Tamper a venue and watch the contract refuse.",
   metadataBase: new URL("https://theseus.network"),

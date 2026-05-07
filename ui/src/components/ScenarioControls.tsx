@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, ZapOff, AlertOctagon, Power, Brain, Cog, Activity, TrendingDown, FlaskConical } from "lucide-react";
+import { Zap, ZapOff, Power, Brain, Cog, Activity, TrendingDown, FlaskConical } from "lucide-react";
 import { VenueReading } from "@/lib/types";
 import { AgentMode } from "@/lib/mock-scenario";
 
@@ -43,6 +43,7 @@ export function ScenarioControls({
 
   const haltedSet = new Set(haltedVenues);
   const dirty = anyOverride || haltedSet.size > 0;
+  const disabled = busy || agentPending;
 
   const wrap = async (fn: () => Promise<void> | void) => {
     setBusy(true);
@@ -55,71 +56,46 @@ export function ScenarioControls({
 
   return (
     <div className="surface p-5 mb-4">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <div className="eyebrow mb-1">Demo levers</div>
-          <div className="text-sm text-fg-dim leading-snug max-w-xl">
-            Three structurally distinct attack shapes. Each triggers a refusal a
-            naïve oracle contract <em>cannot</em> reproduce.
-          </div>
-        </div>
-        {dirty && (
-          <button
-            className="btn"
-            onClick={() => wrap(onResetAll)}
-            disabled={busy || agentPending}
-            title="Clear all overrides + halts"
-          >
-            Reset all
-          </button>
-        )}
-      </div>
-
-      {/* Agent-mode toggle */}
-      <div className="rounded-[10px] bg-surface-2 border border-border p-3 mb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Brain size={14} className="text-coral" />
-          <span className="mono text-[11px] uppercase tracking-wider text-fg">
-            Agent
-          </span>
+      {/* Header row: title + agent mode toggle + reset */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="eyebrow">Demo levers</div>
+        <div className="flex items-center gap-3 flex-wrap">
           {agentPending && (
             <span className="mono text-[10px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
               reasoning…
             </span>
           )}
-        </div>
-        <div className="flex gap-1 p-1 rounded-[8px] bg-bg border border-border">
-          <ModeChip
-            active={agentMode === "rule"}
-            disabled={busy || agentPending}
-            onClick={() => onAgentModeChange("rule")}
-            icon={<Cog size={11} />}
-            label="Rule-based"
-          />
-          <ModeChip
-            active={agentMode === "deepseek"}
-            disabled={busy || agentPending}
-            onClick={() => onAgentModeChange("deepseek")}
-            icon={<Brain size={11} />}
-            label="DeepSeek"
-          />
+          <div className="flex gap-0.5 p-0.5 rounded-[8px] bg-bg border border-border">
+            <ModeChip
+              active={agentMode === "rule"}
+              disabled={disabled}
+              onClick={() => onAgentModeChange("rule")}
+              icon={<Cog size={10} />}
+              label="Rules"
+            />
+            <ModeChip
+              active={agentMode === "deepseek"}
+              disabled={disabled}
+              onClick={() => onAgentModeChange("deepseek")}
+              icon={<Brain size={10} />}
+              label="Agent"
+            />
+          </div>
+          {dirty && (
+            <button className="btn" onClick={() => wrap(onResetAll)} disabled={disabled}>
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-        {/* Pump all venues — Mango shape */}
-        <div className="rounded-[10px] bg-surface-2 border border-border p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertOctagon size={14} className="text-coral" />
-            <span className="mono text-[11px] uppercase tracking-wider text-fg">
-              Mango-shape attack
-            </span>
-          </div>
-          <p className="text-xs text-fg-dim leading-relaxed mb-3">
-            Pump <em>all three venues</em> to the same manipulated price. No
-            numerical divergence. A venue-quorum contract sees agreement and
-            prices it. The agent reasons about depth + baseline deviation.
-          </p>
+      {/* Two-column layout: manipulation on left, scenarios on right */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Manipulation tools */}
+        <div className="rounded-[10px] bg-surface-2 border border-border p-4 space-y-3">
+          <div className="eyebrow">Manipulation</div>
+
+          {/* Pump all venues */}
           {pumpOpen ? (
             <form
               className="flex gap-2"
@@ -142,18 +118,13 @@ export function ScenarioControls({
                   onChange={(e) => setPumpValue(e.target.value)}
                   className="w-full pl-7 pr-3 py-2 mono text-sm rounded-[8px] bg-bg border border-border focus:outline-none focus:border-coral"
                   autoFocus
-                  disabled={busy || agentPending}
+                  disabled={disabled}
                 />
               </div>
-              <button type="submit" className="btn btn-primary" disabled={busy || agentPending}>
+              <button type="submit" className="btn btn-primary" disabled={disabled}>
                 {busy ? "..." : "Pump"}
               </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setPumpOpen(false)}
-                disabled={busy || agentPending}
-              >
+              <button type="button" className="btn" onClick={() => setPumpOpen(false)} disabled={disabled}>
                 Cancel
               </button>
             </form>
@@ -161,88 +132,71 @@ export function ScenarioControls({
             <button
               className="btn btn-primary w-full justify-center"
               onClick={() => setPumpOpen(true)}
-              disabled={busy || agentPending}
+              disabled={disabled}
+              title="Set every venue's price to the same fake value (Mango shape)"
             >
               <Zap size={13} /> Pump all venues
             </button>
           )}
+
+          {/* Halt toggles */}
+          <div>
+            <div className="mono text-[10px] text-fg-mute mb-1.5">Halt a venue</div>
+            <div className="grid grid-cols-3 gap-2">
+              {VENUES.map((v) => {
+                const halted = haltedSet.has(v);
+                return (
+                  <button
+                    key={v}
+                    className={`btn w-full justify-center ${halted ? "btn-danger" : ""}`}
+                    onClick={() => wrap(() => onHaltToggle(v))}
+                    disabled={disabled}
+                  >
+                    {halted ? <ZapOff size={12} /> : <Power size={12} />}
+                    {LABEL[v]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Halt context */}
+        {/* Scenario presets */}
         <div className="rounded-[10px] bg-surface-2 border border-border p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Power size={14} className="text-coral" />
-            <span className="mono text-[11px] uppercase tracking-wider text-fg">
-              Off-chain context event
-            </span>
-          </div>
-          <p className="text-xs text-fg-dim leading-relaxed mb-3">
-            Mark a venue as <em>halted</em> via a status-page event. The agent
-            reads the world; a contract reading a Chainlink feed has no API for
-            this.
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {VENUES.map((v) => {
-              const halted = haltedSet.has(v);
-              return (
-                <button
-                  key={v}
-                  className={`btn w-full justify-center ${halted ? "btn-danger" : ""}`}
-                  onClick={() => wrap(() => onHaltToggle(v))}
-                  disabled={busy || agentPending}
-                >
-                  {halted ? <ZapOff size={12} /> : <Power size={12} />}
-                  {LABEL[v]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Black-swan presets — only meaningful in DeepSeek mode */}
-      <div className="rounded-[10px] bg-surface-2 border border-border p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <FlaskConical size={14} className="text-coral" />
-          <span className="mono text-[11px] uppercase tracking-wider text-fg">
-            Black-swan scenarios{agentMode === "rule" && (
-              <span className="text-fg-mute"> · enable DeepSeek to see the difference</span>
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="eyebrow">Scenarios</div>
+            {agentMode === "rule" && (
+              <span className="mono text-[10px] text-fg-mute">switch to Agent for these</span>
             )}
-          </span>
-        </div>
-        <p className="text-xs text-fg-dim leading-relaxed mb-3">
-          Cases where a rule-based agent gives the wrong answer. A reasoning agent
-          should catch the first two and avoid false-positives on the third.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <BlackSwanButton
-            icon={<Activity size={12} />}
-            label="Depth collapse"
-            sub="prices unchanged, depth → 5%"
-            onClick={() => wrap(() => onBlackSwan("depth-collapse"))}
-            disabled={busy || agentPending}
-          />
-          <BlackSwanButton
-            icon={<TrendingDown size={12} />}
-            label="49% pump"
-            sub="just under rule threshold"
-            onClick={() => wrap(() => onBlackSwan("subtle-pump"))}
-            disabled={busy || agentPending}
-          />
-          <BlackSwanButton
-            icon={<Activity size={12} />}
-            label="Real flash crash"
-            sub="legit −30%, agent should price"
-            onClick={() => wrap(() => onBlackSwan("flash-crash"))}
-            disabled={busy || agentPending}
-          />
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <ScenarioButton
+              icon={<Activity size={12} />}
+              label="Depth collapse"
+              sub="prices unchanged, depth drops to 5%"
+              onClick={() => wrap(() => onBlackSwan("depth-collapse"))}
+              disabled={disabled}
+            />
+            <ScenarioButton
+              icon={<TrendingDown size={12} />}
+              label="49% pump"
+              sub="just under the rule threshold"
+              onClick={() => wrap(() => onBlackSwan("subtle-pump"))}
+              disabled={disabled}
+            />
+            <ScenarioButton
+              icon={<FlaskConical size={12} />}
+              label="Flash crash"
+              sub="real 30% drop. agent should price"
+              onClick={() => wrap(() => onBlackSwan("flash-crash"))}
+              disabled={disabled}
+            />
+          </div>
         </div>
       </div>
 
       <div className="mt-3 text-[11px] text-fg-mute">
-        The third path — <em>tampering one venue</em> — lives on each venue
-        card below. Numerical divergence is the table-stakes attack a
-        rule-based contract <em>can</em> catch.
+        Tamper a single venue from its card below.
       </div>
     </div>
   );
@@ -263,7 +217,7 @@ function ModeChip({
 }) {
   return (
     <button
-      className={`mono text-[11px] py-1.5 px-3 rounded-[6px] flex items-center gap-1.5 transition ${
+      className={`mono text-[11px] py-1 px-2.5 rounded-[6px] flex items-center gap-1.5 transition ${
         active ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
       }`}
       onClick={onClick}
@@ -275,7 +229,7 @@ function ModeChip({
   );
 }
 
-function BlackSwanButton({
+function ScenarioButton({
   icon,
   label,
   sub,
@@ -290,15 +244,15 @@ function BlackSwanButton({
 }) {
   return (
     <button
-      className="rounded-[8px] bg-bg border border-border hover:border-coral disabled:opacity-50 disabled:cursor-not-allowed transition p-3 text-left"
+      className="rounded-[8px] bg-bg border border-border hover:border-coral disabled:opacity-50 disabled:cursor-not-allowed transition px-3 py-2.5 text-left"
       onClick={onClick}
       disabled={disabled}
     >
-      <div className="flex items-center gap-2 mono text-[11px] uppercase tracking-wider text-fg mb-0.5">
+      <div className="flex items-center gap-2 mono text-[11px] uppercase tracking-wider text-fg">
         {icon}
         {label}
       </div>
-      <div className="mono text-[10px] text-fg-mute">{sub}</div>
+      <div className="mono text-[10px] text-fg-mute mt-0.5">{sub}</div>
     </button>
   );
 }

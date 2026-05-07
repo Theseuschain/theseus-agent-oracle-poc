@@ -27,6 +27,7 @@ import {
   deriveFeed,
   deriveTimeline,
   deriveVenues,
+  hashForReason,
   initialScenario,
   setAgentMode,
 } from "@/lib/mock-scenario";
@@ -159,7 +160,7 @@ export default function HomePage() {
             decision: decision.decision,
             priceUsd: decision.priceUsd,
             reason: decision.reason ?? head.reason,
-            reasonHash: head.reasonHash,
+            reasonHash: hashForReason(decision.decision, decision.reason ?? ""),
             reasoning: decision.reasoning,
             inspect: {
               venues: venuesSnapshot,
@@ -240,17 +241,17 @@ export default function HomePage() {
     if (kind === "depth-collapse") {
       await runWithAgent(
         (s) => applyDepthCollapse(s, 0.05),
-        "User collapsed depth to 5% of normal across all venues. Prices unchanged. Reason about exitability — can a $100M position exit at the quoted price with this depth?",
+        "Depth across all venues just dropped to 5% of normal. Prices are unchanged. Can a $100M position exit at the quoted price with this depth?",
       );
     } else if (kind === "subtle-pump") {
       await runWithAgent(
         (s) => applyProportionalMove(s, 1.49),
-        "User pumped all 3 venues by 49% — just under the 50% baseline-deviation rule threshold. Numerical divergence remains zero. A rule-based agent priced this. Reason whether you should.",
+        "All three venues just moved 49% in one cycle, sitting at the same level. That's just under the 50% rule threshold; a rule-based agent prices this. Should you?",
       );
     } else if (kind === "flash-crash") {
       await runWithAgent(
         (s) => applyProportionalMove(s, 0.7),
-        "Genuine ETH flash crash: all venues dropped 30% in seconds. Volume across all venues spiked but the move itself is real. Reason whether to price this — false-positives on real market events would also hurt the protocol.",
+        "Genuine ETH flash crash: all venues dropped 30% in seconds with volume scaling. The move is real. Refusing real market events also hurts the protocol.",
       );
     }
   };
@@ -361,9 +362,10 @@ function Header({ mode }: { mode: "live" | "mock" }) {
           Theseus Agent Oracle
         </h1>
         <p className="text-fg-dim text-sm md:text-base max-w-2xl">
-          Aave V3, unmodified. The price oracle is a SHIP agent reading Coinbase,
-          Binance, and a Uniswap V3 pool directly. When the venues disagree, the
-          agent refuses to price — and Aave&apos;s price-touching paths revert with it.
+          Aave V3, unmodified. The price oracle is a Theseus agent reading
+          Coinbase, Binance, and a Uniswap V3 pool directly. When the venues
+          disagree, the agent refuses to price, and Aave&apos;s price-touching
+          paths revert with it.
         </p>
       </div>
       <div className="hidden sm:block">
@@ -381,16 +383,18 @@ function Footer() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <div className="eyebrow mb-2">How it works</div>
-          The agent runs every 10 blocks (~60s). It calls three tools, applies a
-          50bps depth-weighted-median policy, and pushes the result on-chain via{" "}
-          <span className="mono text-fg">evm_call</span>. Refusals revert with{" "}
-          <span className="mono text-fg">PriceRefused(reasonHash)</span>.
+          The agent runs every 10 blocks (~60s). It reads the three venues,
+          reconciles them, and writes the result to{" "}
+          <span className="mono text-fg">AgentPriceFeed.sol</span>. Refusals
+          revert with <span className="mono text-fg">PriceRefused(reasonHash)</span>,
+          which halts every Aave path that touches the price.
         </div>
         <div>
-          <div className="eyebrow mb-2">Try the tamper</div>
-          Override one venue with a manipulated price. The next agent run will
-          see it, detect the divergence, and refuse. Aave borrows and
-          liquidations halt until a clean cycle.
+          <div className="eyebrow mb-2">What to try</div>
+          Pump every venue to the same fake number. Halt one. Tamper a single
+          one from its card. Each scenario should make the agent refuse for a
+          different reason. The flash-crash preset tests the opposite: a real
+          market move the agent should accept.
         </div>
         <div>
           <div className="eyebrow mb-2">Source</div>
@@ -403,7 +407,7 @@ function Footer() {
             Theseuschain/theseus-agent-oracle-poc
           </a>
           <div className="mt-2 mono text-[11px]">
-            Aave V3 fork: zero modifications. Diff is empty by design.
+            Aave V3 fork: zero modifications. The diff is empty by design.
           </div>
         </div>
       </div>
