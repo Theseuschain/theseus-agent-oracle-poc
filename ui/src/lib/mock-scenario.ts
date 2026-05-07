@@ -123,37 +123,35 @@ export function applyTamper(
     : `${Math.abs((ratio - 1) * 100).toFixed(1)}%`;
   const reason = `${venue} divergent from ${reference} by ${direction}`;
 
+  const refusedEvent: TimelineEntry = {
+    block: currentBlock(state.blockOffset + 1),
+    decision: "REFUSED",
+    reason,
+    reasonHash: REFUSED_HASH,
+  };
+
   return {
     ...state,
     tamperedVenue: venue,
     tamperedPrice: priceUsd,
-    events: [
-      {
-        block: currentBlock(state.blockOffset + 1),
-        decision: "REFUSED",
-        reason,
-        reasonHash: REFUSED_HASH,
-      },
-      ...state.events,
-    ].slice(0, 20),
+    events: [refusedEvent, ...state.events].slice(0, 20),
     blockOffset: state.blockOffset + 1,
   };
 }
 
 export function applyReset(state: ScenarioState): ScenarioState {
+  const pricedEvent: TimelineEntry = {
+    block: currentBlock(state.blockOffset + 1),
+    decision: "PRICED",
+    priceUsd: 3502.41,
+    maxDeviationBps: 9,
+  };
+
   return {
     ...state,
     tamperedVenue: null,
     tamperedPrice: null,
-    events: [
-      {
-        block: currentBlock(state.blockOffset + 1),
-        decision: "PRICED",
-        priceUsd: 3502.41,
-        maxDeviationBps: 9,
-      },
-      ...state.events,
-    ].slice(0, 20),
+    events: [pricedEvent, ...state.events].slice(0, 20),
     blockOffset: state.blockOffset + 1,
   };
 }
