@@ -35,6 +35,8 @@ export interface TimelineEntry {
   maxDeviationBps?: number;
   reason?: string;
   reasonHash?: string;
+  /** Natural-language chain-of-thought from the agent. Multi-line allowed. */
+  reasoning?: string;
 }
 
 export interface TamperRequest {

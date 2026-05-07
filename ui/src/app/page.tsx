@@ -5,6 +5,7 @@ import { FeedPanel } from "@/components/FeedPanel";
 import { VenueCard } from "@/components/VenueCard";
 import { PositionPanel } from "@/components/PositionPanel";
 import { DecisionTimeline } from "@/components/DecisionTimeline";
+import { ScenarioControls } from "@/components/ScenarioControls";
 import {
   FeedSnapshot,
   VenueReading,
@@ -13,9 +14,12 @@ import {
 } from "@/lib/types";
 import {
   ScenarioState,
+  applyHalt,
   applyPositionAction,
+  applyPumpAll,
   applyReset,
   applyTamper,
+  applyUnhalt,
   deriveFeed,
   deriveTimeline,
   deriveVenues,
@@ -94,6 +98,34 @@ export default function HomePage() {
     await refresh();
   };
 
+  const handlePumpAll = async (priceUsd: number) => {
+    if (mode === "mock") {
+      setScenario((s) => applyPumpAll(s, priceUsd));
+      return;
+    }
+    // Live mode: no first-class "pump all" extrinsic; submit one tamper per venue.
+    for (const v of ["coinbase", "binance", "uniswap"] as const) {
+      await fetch("/api/tamper", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ venue: v, priceUsd, runs: 3 }),
+      });
+    }
+    await refresh();
+  };
+
+  const handleHaltToggle = async (venue: VenueReading["venue"]) => {
+    if (mode === "mock") {
+      setScenario((s) =>
+        s.halted[venue] ? applyUnhalt(s, venue) : applyHalt(s, venue),
+      );
+      return;
+    }
+    // Live mode: halt is a runtime concept the tool-executor would surface
+    // via a separate pallet / context-event channel. Stub for now.
+    console.warn("[halt] live mode not yet wired");
+  };
+
   const handleAction = async (
     action: "deposit" | "borrow" | "repay" | "withdraw",
     amountStr: string,
@@ -137,6 +169,20 @@ export default function HomePage() {
             onAction={handleAction}
           />
         </div>
+
+        {mode === "mock" && (
+          <ScenarioControls
+            haltedVenues={
+              (Object.keys(scenario.halted) as VenueReading["venue"][]).filter(
+                (v) => scenario.halted[v],
+              )
+            }
+            anyOverride={Object.values(scenario.overrides).some((v) => v !== undefined)}
+            onPumpAll={handlePumpAll}
+            onHaltToggle={handleHaltToggle}
+            onResetAll={handleReset}
+          />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {(["coinbase", "binance", "uniswap"] as const).map((v) => {

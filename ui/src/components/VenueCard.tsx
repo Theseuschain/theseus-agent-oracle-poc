@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { VenueReading } from "@/lib/types";
 import { formatUsd, formatAge } from "@/lib/format";
-import { Zap, RotateCcw } from "lucide-react";
+import { Zap, RotateCcw, Power } from "lucide-react";
 
 interface Props {
   reading: VenueReading | null;
@@ -36,22 +36,27 @@ export function VenueCard({ reading, onTamper, onReset, loading }: Props) {
 
   const venue = reading?.venue ?? "coinbase";
   const isTampered = reading?.tampered ?? false;
+  const isHalted = reading?.ok === false;
 
   return (
     <div
-      className={`surface p-6 ${isTampered ? "border-red/40" : "surface-hover"}`}
-      style={isTampered ? { borderColor: "rgba(255,77,77,0.45)" } : undefined}
+      className={`surface p-6 ${isTampered || isHalted ? "border-red/40" : "surface-hover"}`}
+      style={isTampered || isHalted ? { borderColor: "rgba(255,77,77,0.45)" } : undefined}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <div className="text-fg text-base font-medium">{VENUE_LABEL[venue]}</div>
           <div className="eyebrow mt-1">{VENUE_DETAIL[venue]}</div>
         </div>
-        {isTampered && (
+        {isHalted ? (
+          <span className="badge badge-tampered">
+            <Power size={11} /> halted
+          </span>
+        ) : isTampered ? (
           <span className="badge badge-tampered">
             <Zap size={11} /> tampered
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="serif text-3xl tnum mb-1">
