@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
-import { getMockTimeline } from "@/lib/mock-state";
+import { ADDRESSES } from "@/lib/chain";
+import { readTimelineFromEvents } from "@/lib/feed-events";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // For now timeline is always mock — the agent's per-decision events live
-  // off-chain in TensorCommit and aren't yet exposed via a public RPC. When
-  // they are, swap this for a live read.
-  return NextResponse.json({ mode: "mock", entries: getMockTimeline() });
+  if (ADDRESSES.feed) {
+    try {
+      const entries = await readTimelineFromEvents();
+      return NextResponse.json({ mode: "live", entries });
+    } catch (e: unknown) {
+      console.warn("[api/timeline] live read failed, returning empty timeline", e);
+      return NextResponse.json({ mode: "live", entries: [] });
+    }
+  }
+
+  // Mock mode — the client owns the timeline state. Return an empty array
+  // so the client falls through to its derived timeline.
+  return NextResponse.json({ mode: "mock", entries: [] });
 }

@@ -1,18 +1,18 @@
 import { createPublicClient, defineChain, http, parseAbi } from "viem";
+import { getBrowserConfig } from "./deployment";
 
-const evmRpc = process.env.NEXT_PUBLIC_EVM_RPC ?? "http://127.0.0.1:9933";
-const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 1337);
+const cfg = getBrowserConfig();
 
 export const theseus = defineChain({
-  id: chainId,
+  id: cfg.chainId,
   name: "Theseus EVM",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: [evmRpc] } },
+  rpcUrls: { default: { http: [cfg.evmRpc] } },
 });
 
 export const publicClient = createPublicClient({
   chain: theseus,
-  transport: http(evmRpc),
+  transport: http(cfg.evmRpc),
 });
 
 export const FEED_ABI = parseAbi([
@@ -40,8 +40,8 @@ export const ERC20_ABI = parseAbi([
 ]);
 
 export const ADDRESSES = {
-  feed: process.env.NEXT_PUBLIC_AGENT_PRICE_FEED as `0x${string}` | undefined,
-  pool: process.env.NEXT_PUBLIC_POOL as `0x${string}` | undefined,
-  weth: process.env.NEXT_PUBLIC_WETH as `0x${string}` | undefined,
-  usdc: process.env.NEXT_PUBLIC_USDC as `0x${string}` | undefined,
+  feed: cfg.agentPriceFeed,
+  pool: cfg.pool,
+  weth: cfg.weth,
+  usdc: cfg.usdc,
 };
