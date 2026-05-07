@@ -24,7 +24,7 @@ The Cream Finance, Mango, and Terra failures all share the same shape: a contrac
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │                                                                      │
-│   Theseus EVM (pallet-evm)              Theseus AIVM (SHIP)          │
+│   Theseus EVM (pallet-revive / PolkaVM) Theseus AIVM (SHIP)          │
 │  ┌─────────────────────────┐           ┌──────────────────────────┐  │
 │  │                         │           │                          │  │
 │  │   Aave V3 Pool          │           │  price_oracle.ship       │  │
@@ -78,9 +78,11 @@ A SHIP agent does. It reads Coinbase's order book, Binance's ticker, and a Unisw
 
 ## SHIP ↔ EVM bridge
 
-This PoC assumes Theseus's runtime exposes a precompile that lets SHIP agents call EVM contracts. We refer to it as `evm_call(target, calldata, value)` throughout. The agent's EVM-mapped address is treated as `msg.sender` when the call lands.
+Theseus's EVM compatibility runs on **`pallet-revive`** (PolkaVM, RISC-V), not Frontier `pallet-evm`. Solidity contracts compile via `resolc` (Parity's Solidity-to-PolkaVM compiler) and run unmodified at the source level. The Ethereum-compatible JSON-RPC is exposed via the `eth-rpc` proxy on port 8545.
 
-This is the same pattern Moonbeam and Astar use (Substrate-Wasm contracts call EVM contracts via a precompile). If Theseus doesn't expose this yet, the runtime change is small and isolated; the PoC is structured so that the SHIP and Solidity sides are independently testable.
+This PoC assumes the runtime exposes a precompile / tool we call `evm_call(target, calldata, value)` from SHIP, dispatching as `pallet_revive::Pallet::call` with the agent's mapped address as `msg.sender`. The mapping is deterministic per AccountId so the contract sees a stable caller across cycles.
+
+The canonical reference for the EVM stack is [`github.com/Theseuschain/theseus-layerzero-evm`](https://github.com/Theseuschain/theseus-layerzero-evm) — the LayerZero bridge contracts use the same `resolc` + foundry-polkadot toolchain we adopt here.
 
 ## Demo
 

@@ -15,7 +15,7 @@ What's wired vs. what still needs work to run end-to-end.
 | `contracts/foundry.toml` + `scripts/vendor_aave.sh` | Complete. Aave V3 pinned commit. |
 | `agents/price_oracle.ship` | Complete. Schedule = 10 blocks. Reads three venues, reconciles, calls `evm_call`. |
 | `agents/{PRICE_ORACLE_SOUL,RECONCILIATION_POLICY}.md` | Complete. |
-| `tools/` Rust crate | **Buildable.** Real implementations of `coinbase_orderbook`, `binance_ticker`, `uniswap_twap`. `evm_call.rs` documents the runtime-side impl (can't be built standalone — needs `pallet-evm` dispatch). |
+| `tools/` Rust crate | **Buildable.** Real implementations of `coinbase_orderbook`, `binance_ticker`, `uniswap_twap`. `evm_call.rs` documents the runtime-side impl (can't be built standalone — needs `pallet-revive` dispatch). |
 | `pallets/tool-override/` | **Buildable** as a standalone FRAME pallet. Storage, four extrinsics (`override_tool`, `clear_override`, `clear_overrides`, `tick`), `Pallet::resolve()` for the tool-executor to call. |
 | `cli/` | **Compiles.** Aave-side commands use real alloy bindings. Substrate-side uses subxt's dynamic API targeting `pallet-tool-override`. |
 | `ui/` | **Buildable Next.js app.** Four panels (live feed, three venue cards with tamper, position, decision timeline). Two modes: mock (no chain required) and live (reads `AgentPriceFeed`, submits to `pallet-tool-override`). Mock mode is fully working for screenshots / decks today. |
@@ -34,8 +34,11 @@ These are the only items that have to happen *inside Theseus's runtime crate*
    it to the registry under the right name (`coinbase_orderbook`,
    `binance_ticker`, `uniswap_twap`).
 
-3. **Implement the `evm_call` precompile/tool.** A SHIP→EVM dispatch through
-   `pallet_evm::Pallet::call`. Sketch in [`tools/src/evm_call.rs`](tools/src/evm_call.rs).
+3. **Implement the `evm_call` precompile/tool.** A SHIP→PolkaVM dispatch through
+   `pallet_revive::Pallet::call` (Theseus runs PolkaVM, not Frontier `pallet-evm`).
+   Sketch in [`tools/src/evm_call.rs`](tools/src/evm_call.rs). The canonical
+   reference for the EVM toolchain (resolc, foundry-polkadot, dual profile
+   pattern) is [`Theseuschain/theseus-layerzero-evm`](https://github.com/Theseuschain/theseus-layerzero-evm).
    This is the SHIP↔EVM bridge that's the only meaningful runtime addition
    for this PoC.
 

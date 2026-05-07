@@ -1,7 +1,8 @@
-//! EVM Call Tool — the SHIP↔EVM bridge
+//! EVM Call Tool — the SHIP↔PolkaVM bridge
 //!
 //! Documents the `evm_call` tool used by `agents/price_oracle.ship` to write
-//! into `AgentPriceFeed.sol` on Theseus's `pallet-evm`.
+//! into `AgentPriceFeed.sol` running on Theseus's `pallet-revive` (PolkaVM,
+//! not Frontier `pallet-evm`).
 //!
 //! ## Tool Signature
 //!
@@ -12,16 +13,21 @@
 //! ## Status
 //!
 //! **This is the one runtime dependency this PoC adds beyond the existing
-//! `the-prediction-market` example.** Everything else (`fetch_url`,
-//! `web_search`, `get_price`, `agents_request` chain extension) already exists
-//! in the Theseus tool-executor and runtime. `evm_call` does not.
+//! Theseus example repos.** Everything else (`fetch_url`, `web_search`,
+//! `get_price`, `agents_request` chain extension) already exists in the
+//! Theseus tool-executor and runtime. `evm_call` does not.
 //!
-//! The pattern is well-established in Substrate: Moonbeam exposes a
-//! `XcmTransactor` precompile and Astar exposes `Wasm-XCM` precompiles for
-//! cross-VM calls. For our purposes the simpler version suffices:
+//! Theseus's EVM compatibility comes from `pallet-revive` (PolkaVM, RISC-V
+//! VM with an Ethereum-compatible JSON-RPC at the `eth-rpc` proxy). Solidity
+//! deploys go through `resolc` (Parity's Solidity-to-PolkaVM compiler);
+//! Solidity contracts run unmodified at the source level. The bridge from
+//! a SHIP agent into a deployed contract is a `pallet-revive::Pallet::call`
+//! dispatch, not the Frontier `pallet-evm::Pallet::call`.
+//!
+//! Sketch:
 //!
 //! ```rust
-//! // tool-executor/src/tools/evm_call.rs (sketch)
+//! // tool-executor/src/tools/evm_call.rs
 //! impl Tool for EvmCallTool {
 //!     fn name(&self) -> &str { "evm_call" }
 //!
@@ -30,50 +36,55 @@
 //!         let data: Bytes  = args.get("data")?.as_bytes()?;
 //!         let value: U256  = args.get("value")?.as_u256()?;
 //!
-//!         // Map the SHIP agent's substrate address to its EVM-mapped address.
-//!         // Same scheme Frontier uses for ethereum-compatible addresses.
+//!         // Map the SHIP agent's substrate AccountId32 to its EVM-mapped
+//!         // address. pallet-revive uses a deterministic mapping so the
+//!         // contract sees the same address every cycle.
 //!         let from = derive_evm_address(ctx.agent_id);
 //!
-//!         let result = pallet_evm::Pallet::<Runtime>::call(
-//!             RawOrigin::EvmCall(from).into(),
-//!             from, target, data, value,
-//!             /* gas_limit */    1_500_000,
-//!             /* max_fee_per_gas */ U256::from(1_000_000_000),
-//!             /* max_priority_fee_per_gas */ None,
-//!             /* nonce */        None,
-//!             /* access_list */  Vec::new(),
+//!         let result = pallet_revive::Pallet::<Runtime>::call(
+//!             RawOrigin::Signed(ctx.agent_account_id.clone()).into(),
+//!             target,
+//!             value,
+//!             /* gas_limit */    Weight::from_parts(2_000_000_000, 200_000),
+//!             /* storage_deposit_limit */ None,
+//!             data,
 //!         )?;
 //!
-//!         Ok(Output::bytes(result.value))
+//!         Ok(Output::bytes(result.data))
 //!     }
 //! }
 //! ```
 //!
 //! ## Auth model
 //!
-//! The receiving EVM contract sees `msg.sender == derive_evm_address(agent_id)`,
-//! so `AgentPriceFeed.onlyAgent` enforces that only this specific SHIP agent
-//! can write the price. Any other SHIP agent calling the same contract would
-//! get a different EVM address and revert.
+//! `AgentPriceFeed.onlyAgent` enforces that only the SHIP agent's mapped
+//! address can write the price. pallet-revive's address mapping is
+//! deterministic per AccountId, so the mapping persists across runs and any
+//! other SHIP agent calling the same contract gets a different `msg.sender`
+//! and reverts.
 //!
-//! ## What this assumes about Theseus's pallet-evm config
+//! ## What this assumes about Theseus's runtime
 //!
-//! 1. **Standard Frontier `pallet-evm`** — confirmed by the user.
-//! 2. **EVM-address-mapping for AccountIds** — Theseus runtime must derive a
-//!    deterministic EVM address from a SHIP agent's substrate-style AccountId.
-//!    The standard pattern is `H160::from_slice(&blake2_256(account_id)[0..20])`,
-//!    which is what Astar and Moonbeam use.
-//! 3. **No EOA balance required for gas** — the agent's calls should be paid
-//!    from its substrate account or sponsored by the chain. Frontier supports
-//!    this via the `EnsureAddressTruncated` config or a dispatch wrapper.
-//!
-//! If any of these don't match Theseus's actual runtime, `evm_call` is the only
-//! file that needs to change.
+//! 1. **`pallet-revive` is in `construct_runtime!`.** Confirmed via the
+//!    LayerZero EVM repo (the bridge contracts deploy to pallet-revive).
+//! 2. **`eth-rpc` proxy is running** in the dev environment, exposing
+//!    Ethereum-compatible JSON-RPC on port 8545 (this is what viem/alloy
+//!    talk to from the UI / tests).
+//! 3. **The agent's substrate AccountId maps to a stable EVM address.**
+//!    pallet-revive's default AccountId-to-H160 mapping handles this.
 //!
 //! ## Reverse direction (EVM → SHIP)
 //!
-//! Out of scope for v0. The PoC uses a **push** model: the agent pushes prices
-//! on a schedule, the EVM contract reads cached storage. A pull model
-//! (Aave calls SHIP via precompile) is more elegant but requires either a
-//! synchronous chain extension or a request/response pattern across blocks.
-//! Push is enough to demonstrate the thesis.
+//! Out of scope for v0. The PoC uses a **push** model: the agent pushes
+//! prices on a schedule, the EVM contract reads cached storage. A pull
+//! model (Aave calls SHIP via precompile) is more elegant but requires
+//! either a synchronous chain extension or a request/response pattern
+//! across blocks. Push is enough to demonstrate the thesis.
+//!
+//! ## Reference: Theseus EVM tooling
+//!
+//! - github.com/Theseuschain/theseus-layerzero-evm — the LayerZero bridge
+//!   EVM contracts. Same Solidity-to-PolkaVM toolchain (`resolc`,
+//!   foundry-polkadot, dual `default` and `pvm` foundry profiles).
+//! - github.com/theseus-network/theseus-chain — the Substrate runtime that
+//!   includes `pallet-revive`, the agent runtime, and the eth-rpc proxy.

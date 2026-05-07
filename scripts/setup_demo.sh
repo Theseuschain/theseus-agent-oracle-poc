@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # One-shot demo setup. Runs from a clean state to a configured Aave V3
 # deployment with the price oracle agent registered and producing prices.
+#
+# This mirrors the local-dev pattern from
+# github.com/Theseuschain/theseus-layerzero-evm/packages/lz-local: a
+# theseus-node + the `eth-rpc` proxy together expose a substrate WS
+# (9944) and an Ethereum-compatible JSON-RPC (8545). PolkaVM compiles
+# happen via foundry-polkadot's resolc.
 
 set -euo pipefail
 
@@ -13,11 +19,23 @@ LOG()  { printf "\033[1;34m[setup]\033[0m %s\n" "$*"; }
 DIE()  { printf "\033[1;31m[setup]\033[0m %s\n" "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
-# 0. Prerequisites + env
+# 0. Prerequisites
 # ---------------------------------------------------------------------------
-for cmd in theseus-cli theseus-node forge cast jq curl; do
+# - theseus-node + theseus-cli from github.com/theseus-network/theseus-chain
+# - eth-rpc proxy (Substrate's Ethereum JSON-RPC translator)
+# - foundry-polkadot's `forge` (with resolc 1.0.0). NOT vanilla foundry —
+#   PolkaVM bytecode requires resolc, and Theseus runs pallet-revive,
+#   not pallet-evm.
+# - jq + curl
+for cmd in theseus-cli theseus-node eth-rpc forge cast jq curl; do
     command -v "$cmd" >/dev/null 2>&1 || DIE "missing required command: $cmd"
 done
+
+# Confirm forge is the polkadot fork by checking for resolc support.
+if ! forge --help 2>&1 | grep -q polkadot; then
+    LOG "warning: 'forge' on PATH may be vanilla foundry. PolkaVM compile"
+    LOG "         requires foundry-polkadot. See README.md for install."
+fi
 
 # Source local env if present.
 if [ -f "$REPO_ROOT/.env.local" ]; then
@@ -27,47 +45,48 @@ if [ -f "$REPO_ROOT/.env.local" ]; then
     set +a
 fi
 
-THESEUS_EVM_RPC="${THESEUS_EVM_RPC:-http://127.0.0.1:9933}"
+THESEUS_EVM_RPC="${THESEUS_EVM_RPC:-http://127.0.0.1:8545}"
 THESEUS_WS="${THESEUS_WS:-ws://127.0.0.1:9944}"
 DEPLOYER_KEY="${DEPLOYER_KEY:-}"
 [ -n "$DEPLOYER_KEY" ] || DIE "DEPLOYER_KEY not set (export or place in .env.local)"
 
 # ---------------------------------------------------------------------------
-# 1. Vendor Aave V3 (no-op if already vendored).
+# 1. Vendor Aave V3.
 # ---------------------------------------------------------------------------
 LOG "Vendoring Aave V3..."
 "$REPO_ROOT/scripts/vendor_aave.sh"
 
 # ---------------------------------------------------------------------------
-# 2. Start a local Theseus node if one isn't already running.
+# 2. Start theseus-node + eth-rpc if not already running.
 # ---------------------------------------------------------------------------
 if ! curl -sf "$THESEUS_EVM_RPC" -X POST \
      -H 'Content-Type: application/json' \
      -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' >/dev/null 2>&1; then
-    LOG "Starting local Theseus node..."
+    LOG "Starting theseus-node..."
     theseus-node --dev --tmp \
         --rpc-cors=all --rpc-port=9944 --rpc-external \
-        --evm-rpc-port=9933 \
         > "$REPO_ROOT/.node.log" 2>&1 &
     echo $! > "$REPO_ROOT/.node.pid"
 
-    # Wait for both endpoints to come up. Cap at 60s.
+    LOG "Starting eth-rpc proxy..."
+    eth-rpc --dev > "$REPO_ROOT/.eth-rpc.log" 2>&1 &
+    echo $! > "$REPO_ROOT/.eth-rpc.pid"
+
     timeout=60
     until curl -sf "$THESEUS_EVM_RPC" -X POST \
           -H 'Content-Type: application/json' \
           -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' >/dev/null 2>&1; do
         sleep 1
         timeout=$((timeout - 1))
-        [ $timeout -gt 0 ] || DIE "node did not become ready within 60s; see .node.log"
+        [ $timeout -gt 0 ] || DIE "eth-rpc did not become ready within 60s; see .eth-rpc.log"
     done
-    LOG "Theseus node ready."
+    LOG "Theseus node + eth-rpc ready."
 else
     LOG "Reusing running Theseus node."
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Register the price oracle SHIP agent. Returns the substrate AccountId
-#    and the EVM-mapped address.
+# 3. Register the price oracle SHIP agent.
 # ---------------------------------------------------------------------------
 LOG "Deploying price_oracle.ship..."
 DEPLOY_OUTPUT=$(theseus-cli deploy-agent agents/price_oracle.ship --json)
@@ -79,9 +98,9 @@ LOG "Agent ID:    $AGENT_ID"
 LOG "Agent EVM:   $AGENT_EVM"
 
 # ---------------------------------------------------------------------------
-# 4. Forge scripts. Run from contracts/ so vm.writeFile("./deployments/...")
-#    writes to contracts/deployments/ — the directory the rest of the CLI/UI
-#    reads from.
+# 4. Forge scripts (pvm profile = PolkaVM compile via resolc).
+#    Run from contracts/ so vm.writeFile("./deployments/...") writes to
+#    contracts/deployments/.
 # ---------------------------------------------------------------------------
 forge_run() {
     local label="$1"; shift
@@ -89,6 +108,7 @@ forge_run() {
     (
         cd "$REPO_ROOT/contracts"
         forge script "$@" \
+            --profile pvm \
             --rpc-url "$THESEUS_EVM_RPC" \
             --private-key "$DEPLOYER_KEY" \
             --broadcast
@@ -122,7 +142,7 @@ POOL_ADDRESSES_PROVIDER="$(cat "$DEPLOYMENTS/PoolAddressesProvider.txt")" \
 AAVE_ORACLE="$(cat "$DEPLOYMENTS/AaveOracle.txt")" \
 ATOKEN_IMPL="$(cat "$DEPLOYMENTS/ATokenImpl.txt")" \
 VARIABLE_DEBT_IMPL="$(cat "$DEPLOYMENTS/VariableDebtImpl.txt")" \
-STABLE_DEBT_IMPL="$(cat "$DEPLOYMENTS/StableDebtImpl.txt")" \
+STABLE_DEBT_IMPL="$(cat "$DEPLOYMENTS/STABLE_DEBT_IMPL.txt")" \
 AGENT_PRICE_FEED="$AGENT_FEED" \
 WETH="$WETH" \
 USDC="$USDC" \
@@ -131,9 +151,7 @@ forge_run "Configuring Aave reserves" \
     script/ConfigureMarket.s.sol
 
 # ---------------------------------------------------------------------------
-# 6. Patch the SHIP agent with the deployed feed address. The agent was
-#    deployed in step 3 with a placeholder; the runtime supports re-deploying
-#    or updating the const via `theseus-cli set-agent-const`.
+# 6. Patch the SHIP agent with the deployed feed address.
 # ---------------------------------------------------------------------------
 LOG "Updating agent FEED_ADDRESS to $AGENT_FEED..."
 theseus-cli set-agent-const "$AGENT_ID" FEED_ADDRESS "$AGENT_FEED" || \

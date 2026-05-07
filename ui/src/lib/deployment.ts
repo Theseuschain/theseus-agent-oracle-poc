@@ -35,8 +35,11 @@ export interface ServerConfig extends BrowserConfig {
 }
 
 const browserDefaults = {
-  evmRpc: "http://127.0.0.1:9933",
-  chainId: 1337,
+  // Theseus exposes Ethereum-compatible JSON-RPC via the `eth-rpc` proxy
+  // (PolkaVM / pallet-revive backend). Match the lz-local convention from
+  // github.com/Theseuschain/theseus-layerzero-evm.
+  evmRpc: "http://127.0.0.1:8545",
+  chainId: 420_420_420, // Theseus devnet — overridden via NEXT_PUBLIC_CHAIN_ID
 } as const;
 
 const serverDefaults = {

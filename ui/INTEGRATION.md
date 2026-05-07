@@ -10,17 +10,26 @@ reread.
 
 ## Conventions inherited from the Theseus example repos
 
-The UI follows the patterns in [`Theseuschain/the-prediction-market`](https://github.com/Theseuschain/the-prediction-market) and [`Theseuschain/proof-of-lobster`](https://github.com/Theseuschain/proof-of-lobster):
+The UI follows the patterns in:
+- [`Theseuschain/the-prediction-market`](https://github.com/Theseuschain/the-prediction-market) — agent + Wasm contract pattern
+- [`Theseuschain/proof-of-lobster`](https://github.com/Theseuschain/proof-of-lobster) — agent deploy flow
+- [`Theseuschain/theseus-layerzero-evm`](https://github.com/Theseuschain/theseus-layerzero-evm) — EVM (PolkaVM) deploy toolchain
 
 | Concern | Convention |
 |---------|-----------|
 | Substrate WS RPC | `ws://127.0.0.1:9944` |
-| EVM JSON-RPC | `http://127.0.0.1:9933` (Frontier `pallet-evm`) |
+| EVM JSON-RPC | `http://127.0.0.1:8545` (the `eth-rpc` proxy in front of `pallet-revive`) |
 | Admin signer URI | `//Alice` in dev (`sr25519`) |
 | Agent registration | `theseus-cli deploy-agent agents/price_oracle.ship` |
 | Deployed addresses | persisted to `contracts/deployments/*.txt` by `scripts/setup_demo.sh` |
 | Substrate library | `@polkadot/api` (server) — equivalent of subxt in JS |
 | EVM library | `viem` (server + client) |
+| EVM compiler | Parity's `foundry-polkadot` (`forge` with `resolc` support) |
+| Foundry profile | `pvm` profile for Theseus deploys, `default` for vanilla EVM tests |
+
+### Why `pallet-revive` and not `pallet-evm`
+
+Theseus runs on Polkadot's PolkaVM (RISC-V) rather than the Ethereum Virtual Machine. `pallet-revive` is the runtime module that hosts PolkaVM contracts. Solidity compiles unmodified at the source level via `resolc` (Parity's Solidity-to-PolkaVM compiler) — vanilla `forge build` won't produce deployable bytecode. The user-facing JSON-RPC is still Ethereum-compatible (`eth_chainId`, `eth_call`, `eth_sendRawTransaction`, etc.) via the `eth-rpc` proxy, so viem/wagmi work end-to-end.
 
 ## Deployment artifacts the UI reads
 
@@ -66,9 +75,11 @@ Returned tuple: `(answer, startedAt, updatedAt, decision, reasonHash)`.
 `decision` is the `enum` from the Solidity contract — `0=UNINITIALIZED`,
 `1=PRICED`, `2=REFUSED`.
 
-**Assumption:** the runtime exposes a Frontier-compatible Ethereum RPC at
-`NEXT_PUBLIC_EVM_RPC`. If it doesn't (i.e. Theseus's EVM is mounted at a
-non-standard endpoint), update `NEXT_PUBLIC_EVM_RPC` and `NEXT_PUBLIC_CHAIN_ID`.
+**Assumption:** the `eth-rpc` proxy is running and exposes the Ethereum-
+compatible JSON-RPC at `NEXT_PUBLIC_EVM_RPC` (default `http://127.0.0.1:8545`).
+For non-local deployments, point at the public RPC URL of the Theseus
+network's `eth-rpc` instance. The `NEXT_PUBLIC_CHAIN_ID` should match the
+chain ID `eth-rpc` reports (default `420420420` for Theseus devnet).
 
 ### 2. Live timeline — feed events via `viem.getContractEvents`
 
