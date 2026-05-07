@@ -177,11 +177,17 @@ export function analyze(state: ScenarioState): RefusalAnalysis {
   const median = depthWeightedMedian(valid);
 
   // Rule 2 — exitability / extreme baseline deviation (Mango shape).
-  // Compare to the cached referencePrice (snapshotted before any tamper).
-  // If reference is 0 (haven't polled yet), skip this rule.
-  if (state.referencePrice > 0) {
+  // Only fires when the venues actually AGREE on the manipulated price —
+  // that's the signature of a coordinated mark-pump where every reporting
+  // venue is the same shallow pool. Single-venue tampers should fall
+  // through to Rule 3 (numerical divergence).
+  if (state.referencePrice > 0 && valid.length >= 2) {
+    const minP = Math.min(...valid.map((v) => v.priceUsd));
+    const maxP = Math.max(...valid.map((v) => v.priceUsd));
+    const venueSpread = minP > 0 ? (maxP - minP) / minP : Infinity;
+    const venuesAgree = venueSpread < 0.05; // within 5% of each other
     const baselineDeviation = Math.abs(median - state.referencePrice) / state.referencePrice;
-    if (baselineDeviation > 0.5) {
+    if (venuesAgree && baselineDeviation > 0.5) {
       const moveX = (median / state.referencePrice).toFixed(1);
       const totalDepth = valid.reduce((s, v) => s + v.depthUsd, 0);
       const reportedDepthFmt =
@@ -313,7 +319,7 @@ export function deriveTimeline(state: ScenarioState): TimelineEntry[] {
   return [...state.events, ...seedFromReference].slice(0, 20);
 }
 
-function recordEvent(state: ScenarioState): TimelineEntry {
+function recordEvent(state: ScenarioState, scenarioHint?: string): TimelineEntry {
   const a = analyze(state);
   const block = currentBlock(state.blockOffset + 1);
   return {
@@ -324,6 +330,12 @@ function recordEvent(state: ScenarioState): TimelineEntry {
     reason: a.reason,
     reasonHash: a.reasonHash,
     reasoning: a.reasoning,
+    inspect: {
+      venues: deriveVenues(state),
+      referencePrice: state.referencePrice,
+      scenarioHint,
+      agent: "rule",
+    },
   };
 }
 

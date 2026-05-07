@@ -97,6 +97,10 @@ export default function HomePage() {
     return () => clearInterval(id);
   }, [refreshVenues]);
 
+  const venuesStillLoading =
+    mode === "mock" &&
+    scenario.liveBase.every((v) => !v.ok && v.error === "loading…");
+
   const feed = mode === "mock" ? deriveFeed(scenario) : liveFeed;
   const venues = mode === "mock" ? deriveVenues(scenario) : liveVenues;
   const timeline = mode === "mock" ? deriveTimeline(scenario) : liveTimeline;
@@ -111,21 +115,31 @@ export default function HomePage() {
    */
   const runWithAgent = useCallback(
     async (compute: (s: ScenarioState) => ScenarioState, scenarioHint?: string) => {
-      const draft = compute(scenario);
+      let draft = compute(scenario);
+      const head = draft.events[0];
+      if (scenarioHint && head?.inspect) {
+        draft = {
+          ...draft,
+          events: [
+            { ...head, inspect: { ...head.inspect, scenarioHint } },
+            ...draft.events.slice(1),
+          ],
+        };
+      }
       setScenario(draft);
 
       if (draft.agentMode !== "deepseek") return;
 
       setScenario((s) => ({ ...s, pending: true }));
 
+      const venuesSnapshot = deriveVenues(draft);
       try {
-        const venues = deriveVenues(draft);
         const recent = draft.events.slice(1, 4);
         const res = await fetch("/api/agent/decide", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            venues,
+            venues: venuesSnapshot,
             referencePrice: draft.referencePrice,
             recentDecisions: recent,
             scenario: scenarioHint,
@@ -146,8 +160,17 @@ export default function HomePage() {
             priceUsd: decision.priceUsd,
             reason: decision.reason ?? head.reason,
             reasonHash: head.reasonHash,
-            reasoning:
-              `${decision.reasoning}\n\n— deepseek-chat · ${decision.latencyMs}ms`,
+            reasoning: decision.reasoning,
+            inspect: {
+              venues: venuesSnapshot,
+              referencePrice: draft.referencePrice,
+              scenarioHint,
+              agent: "deepseek",
+              prompt: decision.prompt,
+              rawResponse: decision.rawResponse,
+              model: decision.model,
+              latencyMs: decision.latencyMs,
+            },
           };
           return { ...s, events: [replaced, ...s.events.slice(1)], pending: false };
         });
@@ -272,10 +295,10 @@ export default function HomePage() {
         <Header mode={mode} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          <FeedPanel feed={feed} loading={!feed} />
+          <FeedPanel feed={feed} loading={!feed || venuesStillLoading} />
           <PositionPanel
             position={position}
-            feedRefused={refused}
+            feedRefused={refused && !venuesStillLoading}
             onAction={handleAction}
           />
         </div>
@@ -317,7 +340,10 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <DecisionTimeline entries={timeline} loading={!timeline.length && mode === "live"} />
+          <DecisionTimeline
+            entries={timeline}
+            loading={!timeline.length && (mode === "live" || venuesStillLoading)}
+          />
         </div>
 
         <Footer />

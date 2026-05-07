@@ -35,6 +35,10 @@ export interface AgentDecisionOutput {
   /** Latency of the LLM call, ms. */
   latencyMs: number;
   model: string;
+  /** What we sent to the model — surfaced in the demo's inspect panel. */
+  prompt: { system: string; user: string };
+  /** Raw content string the model returned (before JSON parsing). */
+  rawResponse: string;
 }
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
@@ -133,6 +137,7 @@ export async function decide(
     throw new Error("DEEPSEEK_API_KEY not configured");
   }
 
+  const userMessage = buildUserMessage(input);
   const t0 = Date.now();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -151,7 +156,7 @@ export async function decide(
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserMessage(input) },
+          { role: "user", content: userMessage },
         ],
       }),
       signal: ctrl.signal,
@@ -201,5 +206,7 @@ export async function decide(
     reasoning: (parsed.reasoning ?? "no reasoning given").slice(0, 1000),
     latencyMs: Date.now() - t0,
     model: MODEL,
+    prompt: { system: SYSTEM_PROMPT, user: userMessage },
+    rawResponse: content,
   };
 }

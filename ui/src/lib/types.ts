@@ -28,6 +28,22 @@ export interface UserPosition {
   ltv: number;
 }
 
+export interface AgentInspect {
+  /** Snapshot of the venues exactly as the agent saw them. */
+  venues: VenueReading[];
+  referencePrice: number;
+  scenarioHint?: string;
+  /** Which agent ran this decision. */
+  agent: "rule" | "deepseek";
+  /** LLM-only: what we sent to the model, full text. */
+  prompt?: { system: string; user: string };
+  /** LLM-only: raw content the model returned (before JSON parsing). */
+  rawResponse?: string;
+  /** LLM-only. */
+  model?: string;
+  latencyMs?: number;
+}
+
 export interface TimelineEntry {
   block: number;
   decision: Decision;
@@ -37,6 +53,8 @@ export interface TimelineEntry {
   reasonHash?: string;
   /** Natural-language chain-of-thought from the agent. Multi-line allowed. */
   reasoning?: string;
+  /** Everything the agent saw + (for LLM) the prompt and raw response. */
+  inspect?: AgentInspect;
 }
 
 export interface TamperRequest {

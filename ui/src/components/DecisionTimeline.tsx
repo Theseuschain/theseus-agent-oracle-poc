@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { TimelineEntry } from "@/lib/types";
+import { TimelineEntry, AgentInspect, VenueReading } from "@/lib/types";
 import { formatBlock, formatHash, formatUsd } from "@/lib/format";
-import { CircleCheck, CircleX, ChevronDown, ChevronRight } from "lucide-react";
+import { CircleCheck, CircleX, ChevronDown, ChevronRight, Brain, Cog } from "lucide-react";
 
 interface Props {
   entries: TimelineEntry[];
@@ -32,7 +32,11 @@ export function DecisionTimeline({ entries, loading }: Props) {
       ) : (
         <ol className="divide-y divide-border">
           {entries.map((e, i) => (
-            <TimelineRow key={`${e.block}-${i}`} entry={e} defaultOpen={i === 0 && e.decision === "REFUSED"} />
+            <TimelineRow
+              key={`${e.block}-${i}`}
+              entry={e}
+              defaultReasoningOpen={i === 0 && e.decision === "REFUSED"}
+            />
           ))}
         </ol>
       )}
@@ -40,9 +44,17 @@ export function DecisionTimeline({ entries, loading }: Props) {
   );
 }
 
-function TimelineRow({ entry: e, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+function TimelineRow({
+  entry: e,
+  defaultReasoningOpen,
+}: {
+  entry: TimelineEntry;
+  defaultReasoningOpen: boolean;
+}) {
+  const [reasoningOpen, setReasoningOpen] = useState(defaultReasoningOpen);
+  const [inspectOpen, setInspectOpen] = useState(false);
   const hasReasoning = !!e.reasoning;
+  const hasInspect = !!e.inspect;
 
   return (
     <li className="py-3">
@@ -66,12 +78,11 @@ function TimelineRow({ entry: e, defaultOpen }: { entry: TimelineEntry; defaultO
             >
               {e.decision === "REFUSED" ? "refused" : "priced"}
             </span>
+            {e.inspect && <AgentTag agent={e.inspect.agent} />}
           </div>
           <div className="mono text-sm text-fg mt-0.5 tnum truncate">
             {e.decision === "REFUSED" ? (
-              <span className="text-fg-dim">
-                {e.reason ?? "venue divergence"}
-              </span>
+              <span className="text-fg-dim">{e.reason ?? "venue divergence"}</span>
             ) : (
               <>
                 {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "—"}
@@ -83,7 +94,7 @@ function TimelineRow({ entry: e, defaultOpen }: { entry: TimelineEntry; defaultO
               </>
             )}
           </div>
-          <div className="flex items-baseline gap-3 mt-0.5">
+          <div className="flex items-baseline gap-3 mt-0.5 flex-wrap">
             {e.reasonHash && (
               <span className="mono text-[10px] text-fg-mute">
                 {formatHash(e.reasonHash, 6, 6)}
@@ -92,22 +103,180 @@ function TimelineRow({ entry: e, defaultOpen }: { entry: TimelineEntry; defaultO
             {hasReasoning && (
               <button
                 className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
-                onClick={() => setOpen((o) => !o)}
+                onClick={() => setReasoningOpen((o) => !o)}
               >
-                {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                {reasoningOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 agent reasoning
               </button>
             )}
+            {hasInspect && (
+              <button
+                className="mono text-[10px] text-fg-dim hover:text-fg flex items-center gap-1"
+                onClick={() => setInspectOpen((o) => !o)}
+              >
+                {inspectOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                inspect input/output
+              </button>
+            )}
           </div>
-          {hasReasoning && open && (
-            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim">
+          {hasReasoning && reasoningOpen && (
+            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap">
               {e.reasoning}
             </div>
+          )}
+          {hasInspect && inspectOpen && e.inspect && (
+            <InspectPanel inspect={e.inspect} />
           )}
         </div>
       </div>
     </li>
   );
+}
+
+function AgentTag({ agent }: { agent: AgentInspect["agent"] }) {
+  const isDeepSeek = agent === "deepseek";
+  return (
+    <span
+      className={`mono text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded ${
+        isDeepSeek
+          ? "text-coral border border-coral/30 bg-coral/5"
+          : "text-fg-mute border border-border bg-surface-2"
+      }`}
+    >
+      {isDeepSeek ? <Brain size={9} /> : <Cog size={9} />}
+      {isDeepSeek ? "deepseek" : "rule"}
+    </span>
+  );
+}
+
+function InspectPanel({ inspect }: { inspect: AgentInspect }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [showResponse, setShowResponse] = useState(false);
+
+  return (
+    <div className="mt-2 p-3 rounded-[8px] bg-bg border border-border text-xs space-y-3">
+      <Section label="What the agent saw">
+        <ul className="space-y-1">
+          {inspect.venues.map((v) => (
+            <VenueLine key={v.venue} v={v} />
+          ))}
+        </ul>
+        <div className="mt-1.5 mono text-[10px] text-fg-mute">
+          reference price (pre-tamper):{" "}
+          <span className="text-fg-dim tnum">
+            {inspect.referencePrice > 0
+              ? formatUsd(inspect.referencePrice)
+              : "—"}
+          </span>
+        </div>
+        {inspect.scenarioHint && (
+          <div className="mt-1.5 mono text-[10px] text-fg-mute leading-relaxed">
+            scenario hint:{" "}
+            <span className="text-fg-dim">{inspect.scenarioHint}</span>
+          </div>
+        )}
+      </Section>
+
+      {inspect.agent === "deepseek" && (
+        <>
+          <Section label={`Model · ${inspect.model ?? "deepseek-chat"} · ${inspect.latencyMs ?? "?"}ms`}>
+            <button
+              className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
+              onClick={() => setShowPrompt((o) => !o)}
+            >
+              {showPrompt ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+              show full prompt ({(inspect.prompt?.system.length ?? 0) +
+                (inspect.prompt?.user.length ?? 0)}{" "}
+              chars)
+            </button>
+            {showPrompt && inspect.prompt && (
+              <div className="mt-2 space-y-2">
+                <PromptBlock label="system" text={inspect.prompt.system} />
+                <PromptBlock label="user" text={inspect.prompt.user} />
+              </div>
+            )}
+          </Section>
+
+          {inspect.rawResponse && (
+            <Section label="Raw model response (JSON)">
+              <button
+                className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
+                onClick={() => setShowResponse((o) => !o)}
+              >
+                {showResponse ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                show raw output
+              </button>
+              {showResponse && (
+                <pre className="mt-2 p-2 rounded bg-surface-2 border border-border mono text-[10px] text-fg-dim whitespace-pre-wrap break-all overflow-x-auto max-h-96 leading-snug">
+                  {prettyJson(inspect.rawResponse)}
+                </pre>
+              )}
+            </Section>
+          )}
+        </>
+      )}
+      {inspect.agent === "rule" && (
+        <div className="mono text-[10px] text-fg-mute">
+          rule-based agent · no LLM prompt or raw response
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VenueLine({ v }: { v: VenueReading }) {
+  const tag = v.tampered ? " (overridden)" : "";
+  const ageClass = v.ageSeconds > 60 ? "text-amber" : "text-fg-mute";
+  return (
+    <li className="mono text-[10px] flex items-baseline gap-2 flex-wrap">
+      <span className="text-fg-mute uppercase tracking-wider w-16">{v.venue}</span>
+      {v.ok ? (
+        <>
+          <span className="text-fg tnum">
+            {formatUsd(v.priceUsd)}
+            {tag}
+          </span>
+          <span className="text-fg-mute">
+            depth{" "}
+            <span className="text-fg-dim tnum">
+              {formatUsd(v.depthUsd, { compact: true, decimals: 1 })}
+            </span>
+          </span>
+          <span className={ageClass}>{v.ageSeconds}s ago</span>
+        </>
+      ) : (
+        <span className="text-amber">{v.error ?? "unavailable"}</span>
+      )}
+    </li>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="eyebrow mb-1.5">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function PromptBlock({ label, text }: { label: string; text: string }) {
+  return (
+    <div>
+      <div className="mono text-[10px] text-fg-mute mb-1">{label}:</div>
+      <pre className="p-2 rounded bg-surface-2 border border-border mono text-[10px] text-fg-dim whitespace-pre-wrap break-words leading-snug max-h-64 overflow-y-auto">
+        {text}
+      </pre>
+    </div>
+  );
+}
+
+function prettyJson(s: string): string {
+  try {
+    return JSON.stringify(JSON.parse(s), null, 2);
+  } catch {
+    return s;
+  }
 }
 
 function SkeletonList() {
