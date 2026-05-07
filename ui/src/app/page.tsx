@@ -109,25 +109,15 @@ export default function HomePage() {
   const position = mode === "mock" ? scenario.position : livePosition;
 
   /**
-   * In DeepSeek mode, every state-changing action triggers an LLM call.
+   * In Agent mode, every state-changing action triggers an LLM call.
    * We optimistically attach the rule-based event so the user sees
-   * something immediately, then swap in the LLM event when it returns.
-   * Scenario hint is propagated to the prompt for black-swan tests where
-   * the agent benefits from knowing the framing.
+   * something immediately, then swap in the agent's verdict when it
+   * returns. We deliberately do NOT pass a scenario hint or framing —
+   * the agent has to reason from the venue readings alone.
    */
   const runWithAgent = useCallback(
-    async (compute: (s: ScenarioState) => ScenarioState, scenarioHint?: string) => {
-      let draft = compute(scenario);
-      const head = draft.events[0];
-      if (scenarioHint && head?.inspect) {
-        draft = {
-          ...draft,
-          events: [
-            { ...head, inspect: { ...head.inspect, scenarioHint } },
-            ...draft.events.slice(1),
-          ],
-        };
-      }
+    async (compute: (s: ScenarioState) => ScenarioState) => {
+      const draft = compute(scenario);
       setScenario(draft);
 
       if (draft.agentMode !== "deepseek") return;
@@ -144,7 +134,6 @@ export default function HomePage() {
             venues: venuesSnapshot,
             referencePrice: draft.referencePrice,
             recentDecisions: recent,
-            scenario: scenarioHint,
           }),
         });
         if (!res.ok) {
@@ -166,7 +155,6 @@ export default function HomePage() {
             inspect: {
               venues: venuesSnapshot,
               referencePrice: draft.referencePrice,
-              scenarioHint,
               agent: "deepseek",
               prompt: decision.prompt,
               rawResponse: decision.rawResponse,
@@ -219,10 +207,7 @@ export default function HomePage() {
       await refresh();
       return;
     }
-    await runWithAgent(
-      (s) => applyPumpAll(s, priceUsd),
-      `User pumped all 3 venues to $${priceUsd}. Reason about exitability vs the cached reference.`,
-    );
+    await runWithAgent((s) => applyPumpAll(s, priceUsd));
   };
 
   const handleHaltToggle = async (venue: VenueReading["venue"]) => {
@@ -235,25 +220,17 @@ export default function HomePage() {
     );
   };
 
-  // Black-swan scenario presets. Each frames the agent's input with a hint
-  // so the model can reason in context (vs. having to infer the framing
-  // from raw numbers alone).
+  // Black-swan scenario presets. Each one mutates the venues data in a
+  // specific way and lets the agent reason from the raw signals. We
+  // deliberately do NOT pass any framing or hint — the demo's whole point
+  // is that the agent has to identify the failure mode from inputs alone.
   const handleBlackSwan = async (kind: "depth-collapse" | "subtle-pump" | "flash-crash") => {
     if (kind === "depth-collapse") {
-      await runWithAgent(
-        (s) => applyDepthCollapse(s, 0.05),
-        "Depth across all venues just dropped to 5% of normal. Prices are unchanged. Can a $100M position exit at the quoted price with this depth?",
-      );
+      await runWithAgent((s) => applyDepthCollapse(s, 0.05));
     } else if (kind === "subtle-pump") {
-      await runWithAgent(
-        (s) => applyProportionalMove(s, 1.49),
-        "All three venues just moved 49% in one cycle, sitting at the same level. That's just under the 50% rule threshold; a rule-based agent prices this. Should you?",
-      );
+      await runWithAgent((s) => applyProportionalMove(s, 1.49));
     } else if (kind === "flash-crash") {
-      await runWithAgent(
-        (s) => applyProportionalMove(s, 0.7),
-        "Genuine ETH flash crash: all venues dropped 30% in seconds with volume scaling. The move is real. Refusing real market events also hurts the protocol.",
-      );
+      await runWithAgent((s) => applyProportionalMove(s, 0.7));
     }
   };
 
@@ -298,13 +275,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto pt-8">
         <Header />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="mb-4">
           <FeedPanel feed={feed} loading={!feed || venuesStillLoading} />
-          <PositionPanel
-            position={position}
-            feedRefused={refused && !venuesStillLoading}
-            onAction={handleAction}
-          />
         </div>
 
         {mode === "mock" && (
@@ -328,27 +300,50 @@ export default function HomePage() {
           />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {(["coinbase", "binance", "uniswap"] as const).map((v) => {
-            const reading = venues.find((r) => r.venue === v) ?? null;
-            return (
-              <VenueCard
-                key={v}
-                reading={reading ?? { venue: v, priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0 }}
-                onTamper={(price) => handleTamper(v, price)}
-                onReset={handleReset}
-                loading={!reading}
-              />
-            );
-          })}
+        <div className="mb-2">
+          <div className="eyebrow mb-2">Real venue readings</div>
+          <p className="text-xs text-fg-mute mb-3">
+            What the agent sees right now, fetched from the public APIs of each
+            venue. Use the per-card Tamper button to override one venue while
+            leaving the others untouched.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(["coinbase", "binance", "uniswap"] as const).map((v) => {
+              const reading = venues.find((r) => r.venue === v) ?? null;
+              return (
+                <VenueCard
+                  key={v}
+                  reading={reading ?? { venue: v, priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0 }}
+                  onTamper={(price) => handleTamper(v, price)}
+                  onReset={handleReset}
+                  loading={!reading}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="mt-4 mb-4">
+          <div className="eyebrow mb-2">Agent decisions</div>
           <DecisionTimeline
             entries={timeline}
             loading={!timeline.length && (mode === "live" || venuesStillLoading)}
           />
         </div>
+
+        <details className="mb-4">
+          <summary className="cursor-pointer mono text-[11px] uppercase tracking-wider text-fg-mute hover:text-fg list-none flex items-center gap-2">
+            <span className="inline-block w-2.5 h-2.5 border-r border-b border-current rotate-[-45deg] details-arrow"></span>
+            Aave position (connect a wallet)
+          </summary>
+          <div className="mt-3">
+            <PositionPanel
+              position={position}
+              feedRefused={refused && !venuesStillLoading}
+              onAction={handleAction}
+            />
+          </div>
+        </details>
 
         <Footer />
         </div>
@@ -364,12 +359,24 @@ function Header() {
       <h1 className="serif text-3xl md:text-4xl tracking-tight mb-2">
         Theseus Agent Oracle
       </h1>
-      <p className="text-fg-dim text-sm md:text-base max-w-2xl">
-        Aave V3, unmodified. The price oracle is a Theseus agent reading
-        Coinbase, Binance, and a Uniswap V3 pool directly. When the venues
-        disagree, the agent refuses to price, and Aave&apos;s price-touching
-        paths revert with it.
+      <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
+        Real ETH/USD prices from Coinbase, Binance, and Uniswap V3. An agent
+        reads all three, decides whether to price or refuse, and writes the
+        result to a Solidity contract that Aave V3 reads through. Try a
+        manipulation in the panel below; the agent&apos;s verdict and reasoning
+        show up in the timeline.
       </p>
+      <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
+        <li>
+          <span className="text-coral mr-1">1.</span>switch to <span className="text-fg">Agent</span> mode
+        </li>
+        <li>
+          <span className="text-coral mr-1">2.</span>pick a manipulation
+        </li>
+        <li>
+          <span className="text-coral mr-1">3.</span>watch the agent reason
+        </li>
+      </ol>
     </header>
   );
 }

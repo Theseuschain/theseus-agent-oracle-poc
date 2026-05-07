@@ -150,12 +150,25 @@ function Header() {
         Terra Failsafe Agent
       </h1>
       <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-        A Terra-shaped algorithmic stablecoin (USTD/LUND) with one architectural
-        change: an agent gates every mint and redeem call. Step through the
-        actual May 2022 timeline. The agent refuses when the death-spiral
-        pattern fires; the protocol halts gracefully instead of running off the
-        cliff. Terra&apos;s contract had no failsafe and lost $60B in four days.
+        An algorithmic stablecoin (USTD/LUND) with one architectural change
+        from Terra: an agent gates every mint and redeem. The protocol calls
+        the agent <em>before</em> executing; the agent allows or refuses based
+        on the vault&apos;s current health.
       </p>
+      <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
+        <li>
+          <span className="text-coral mr-1">1.</span>switch to <span className="text-fg">Agent</span> mode
+        </li>
+        <li>
+          <span className="text-coral mr-1">2.</span>load a vault state preset
+        </li>
+        <li>
+          <span className="text-coral mr-1">3.</span>try <span className="text-fg">mint</span> or <span className="text-fg">redeem</span>
+        </li>
+        <li>
+          <span className="text-coral mr-1">4.</span>read the verdict + reasoning
+        </li>
+      </ol>
     </header>
   );
 }

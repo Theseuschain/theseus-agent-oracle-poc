@@ -12,22 +12,23 @@ interface Props {
 
 export function DecisionTimeline({ entries, loading }: Props) {
   return (
-    <div className="surface p-6 lg:col-span-3">
+    <div className="surface p-6">
       <div className="flex items-center justify-between mb-5">
-        <div>
-          <div className="eyebrow mb-1">Recent decisions</div>
-          <div className="serif text-lg">Agent timeline</div>
-        </div>
-        <span className="text-fg-mute mono text-[10px]">
-          last {entries.length} runs
-        </span>
+        <div className="serif text-lg">Agent timeline</div>
+        {entries.length > 0 && (
+          <span className="text-fg-mute mono text-[10px]">
+            last {entries.length} runs
+          </span>
+        )}
       </div>
 
       {loading && entries.length === 0 ? (
         <SkeletonList />
       ) : entries.length === 0 ? (
-        <div className="text-fg-dim text-sm py-6 text-center">
-          No decisions yet. The agent runs every 10 blocks (~60s).
+        <div className="text-fg-dim text-sm py-8 text-center max-w-md mx-auto leading-relaxed">
+          Try a manipulation lever above. The agent&apos;s verdict and reasoning
+          will show up here, with an inspect panel for the full prompt and raw
+          response.
         </div>
       ) : (
         <ol className="divide-y divide-border">

@@ -22,8 +22,10 @@ export function TerraTimeline({ entries }: Props) {
       </div>
 
       {entries.length === 0 ? (
-        <div className="text-fg-dim text-sm py-6 text-center">
-          No actions yet. Load a preset and try Mint or Redeem.
+        <div className="text-fg-dim text-sm py-8 text-center max-w-md mx-auto leading-relaxed">
+          Load a vault state above and click <span className="text-fg">Mint</span> or{" "}
+          <span className="text-fg">Redeem</span>. The agent&apos;s verdict and
+          reasoning will land here.
         </div>
       ) : (
         <ol className="divide-y divide-border">
