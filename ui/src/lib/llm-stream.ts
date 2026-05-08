@@ -15,17 +15,21 @@
 //     delta.
 //   - sse: tiny helper to format a server-sent event line.
 
-const REASONING_KEY = '"reasoning":"';
-
-/** Pull the unescaped text of the JSON `reasoning` field out of a
+/** Pull the unescaped text of a string-valued JSON field out of a
  *  partially-streamed JSON string. Returns undefined if the field
  *  hasn't started yet, and the text-so-far while it's still being
  *  emitted. Once the closing quote arrives the returned value stops
- *  changing. */
-export function extractPartialReasoning(buffer: string): string | undefined {
-  const idx = buffer.indexOf(REASONING_KEY);
+ *  changing. Default field is "reasoning"; pass another for agents
+ *  that stream a differently-named text field (e.g. "evidence_summary"
+ *  on the prediction-market resolver). */
+export function extractPartialReasoning(
+  buffer: string,
+  field: string = "reasoning",
+): string | undefined {
+  const key = `"${field}":"`;
+  const idx = buffer.indexOf(key);
   if (idx === -1) return undefined;
-  let i = idx + REASONING_KEY.length;
+  let i = idx + key.length;
   let out = "";
   while (i < buffer.length) {
     const c = buffer[i];
