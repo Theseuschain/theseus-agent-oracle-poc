@@ -75,7 +75,7 @@ export function ScenarioControls({
         <div className="rounded-[10px] bg-surface-2 border border-border p-4 space-y-3">
           <div className="eyebrow">Manipulation</div>
 
-          {/* Pump all venues — Mango Markets shape */}
+          {/* Pump all venues, Mango Markets shape */}
           {pumpOpen ? (
             <form
               className="flex gap-2"

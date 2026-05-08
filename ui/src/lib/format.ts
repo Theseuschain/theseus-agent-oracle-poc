@@ -1,6 +1,6 @@
 export function formatUsd(value: number, opts: { decimals?: number; compact?: boolean } = {}): string {
   const { decimals = 2, compact = false } = opts;
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "–";
   if (compact && Math.abs(value) >= 1_000_000) {
     return `$${(value / 1_000_000).toFixed(1)}M`;
   }
@@ -16,7 +16,7 @@ export function formatUsd(value: number, opts: { decimals?: number; compact?: bo
 }
 
 export function formatNumber(value: number, decimals = 2): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "–";
   return value.toLocaleString("en-US", {
     maximumFractionDigits: decimals,
     minimumFractionDigits: decimals,
@@ -24,7 +24,7 @@ export function formatNumber(value: number, decimals = 2): string {
 }
 
 export function formatAge(seconds: number): string {
-  if (seconds < 0 || !Number.isFinite(seconds)) return "—";
+  if (seconds < 0 || !Number.isFinite(seconds)) return "–";
   if (seconds < 60) return `${Math.floor(seconds)}s ago`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   return `${Math.floor(seconds / 3600)}h ago`;

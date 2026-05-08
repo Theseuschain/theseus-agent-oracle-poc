@@ -124,7 +124,7 @@ export default function TerraPage() {
             decision: "REFUSE",
             reason: "agent unreachable",
             reasoning:
-              "The agent endpoint did not respond. Refusing is the safer default — better to revert the action than to mutate a stressed vault on an unverified verdict.",
+              "The agent endpoint did not respond. Refusing is the safer default. Better to revert the action than to mutate a stressed vault on an unverified verdict.",
           }),
         );
       } finally {
@@ -241,8 +241,8 @@ function Footer() {
         </div>
         <div>
           <div className="eyebrow mb-2">What to try</div>
-          Step through the five presets — Healthy, Slight depeg, Peg cracking,
-          Bank run, Death spiral — and try the same MINT/REDEEM action at
+          Step through the five presets (Healthy, Slight depeg, Peg cracking,
+          Bank run, Death spiral) and try the same MINT/REDEEM action at
           each. The agent should ALLOW most actions during Healthy and start
           refusing as the vault deteriorates. The counterfactual badge shows
           what a no-failsafe contract would have done in the same moment.

@@ -1,6 +1,6 @@
 // URL <-> scenario state for both demos. Keeps the browser URL in sync
 // with the user's last scenario action so paste-a-link reproduces the
-// moment. Encoded as one named action — mirrors the demo's preset
+// moment. Encoded as one named action; mirrors the demo's preset
 // buttons rather than the raw state (much shorter URLs, easier to
 // share verbally).
 //
@@ -12,7 +12,7 @@
 //        ?scenario=flash-crash
 // Terra: ?preset=spiral
 //
-// There is no agent= param — the demo always runs the LLM agent. Rules
+// There is no agent= param; the demo always runs the LLM agent. Rules
 // mode was removed because rule "reasoning" was templated text dressed
 // up to look like agent output, which mis-sells the pitch.
 

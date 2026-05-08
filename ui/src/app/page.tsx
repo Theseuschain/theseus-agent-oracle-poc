@@ -42,7 +42,7 @@ import {
 
 export default function HomePage() {
   // Mode is detected once on mount via /api/feed. After that, in mock mode
-  // the client owns the state — Vercel serverless instances don't share
+  // the client owns the state. Vercel serverless instances don't share
   // module-level state, so a server-side store wouldn't survive the
   // tamper → poll round trip.
   const [mode, setMode] = useState<"live" | "mock">("mock");
@@ -86,7 +86,7 @@ export default function HomePage() {
     refresh();
   }, [refresh]);
 
-  // In live mode, poll every 4s. In mock mode, the client owns state — no poll.
+  // In live mode, poll every 4s. In mock mode, the client owns state, so no poll.
   useEffect(() => {
     if (mode !== "live") return;
     const id = setInterval(refresh, 4000);
@@ -103,7 +103,7 @@ export default function HomePage() {
         setScenario((s) => applyLiveReadings(s, res.venues));
       }
     } catch (e) {
-      // Network/host failure — keep whatever readings we already had.
+      // Network/host failure: keep whatever readings we already had.
       console.warn("[venues] poll failed", e);
     }
   }, []);
@@ -138,10 +138,10 @@ export default function HomePage() {
    * Every user action pushes a pending placeholder onto the timeline and
    * issues a real LLM call. When the response lands we replace the head
    * placeholder with the agent's verdict. On failure we mark the head
-   * REFUSED with an "agent unreachable" note — refusing is the safer
+   * REFUSED with an "agent unreachable" note. Refusing is the safer
    * default per the agent's own system prompt.
    *
-   * We deliberately do NOT pass a scenario hint or framing — the agent
+   * We deliberately do NOT pass a scenario hint or framing. The agent
    * has to reason from the venue readings alone.
    */
   const runWithAgent = useCallback(
@@ -237,7 +237,7 @@ export default function HomePage() {
           reason: "agent unreachable",
           reasonHash: hashForReason("REFUSED", "agent unreachable"),
           reasoning:
-            "The agent endpoint did not respond. Refusing is the safer default — better to halt the price feed briefly than to commit a value the agent never confirmed.",
+            "The agent endpoint did not respond. Refusing is the safer default. Better to halt the price feed briefly than to commit a value the agent never confirmed.",
           inspect: {
             venues: venuesSnapshot,
             referencePrice: draft.referencePrice,
@@ -302,7 +302,7 @@ export default function HomePage() {
 
   // Black-swan scenario presets. Each one mutates the venues data in a
   // specific way and lets the agent reason from the raw signals. We
-  // deliberately do NOT pass any framing or hint — the demo's whole point
+  // deliberately do NOT pass any framing or hint. The demo's whole point
   // is that the agent has to identify the failure mode from inputs alone.
   const handleBlackSwan = async (kind: "depth-collapse" | "subtle-pump" | "flash-crash") => {
     setLastScenario({ kind });
@@ -322,7 +322,7 @@ export default function HomePage() {
     replaceUrl(writeAaveUrl({ scenario: lastScenario ?? undefined }));
   }, [lastScenario, mode]);
 
-  // Apply pending URL scenario once venues are loaded. Single-shot — clears
+  // Apply pending URL scenario once venues are loaded. Single-shot; clears
   // the ref after apply.
   useEffect(() => {
     if (mode !== "mock") return;

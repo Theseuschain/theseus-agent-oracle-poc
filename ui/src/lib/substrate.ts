@@ -110,7 +110,7 @@ function submitAndWait(
       }
 
       if (status.isFinalized) {
-        // Also check for ExtrinsicFailed inside the events array — some
+        // Also check for ExtrinsicFailed inside the events array. Some
         // dispatch errors only show up there, not via dispatchError.
         for (const r of events) {
           if (r.event.section === "system" && r.event.method === "ExtrinsicFailed") {
@@ -161,7 +161,7 @@ export async function activeOverrides(): Promise<TamperRequest["venue"][]> {
   const venues: TamperRequest["venue"][] = [];
   for (const [key] of entries) {
     // For a `StorageDoubleMap` partial-prefix query (first key bound), the
-    // remaining args contain only the *second* key — the tool-name.
+    // remaining args contain only the *second* key (the tool-name).
     const toolName = key.args[0]?.toString();
     if (toolName === "coinbase_orderbook") venues.push("coinbase");
     else if (toolName === "binance_ticker") venues.push("binance");

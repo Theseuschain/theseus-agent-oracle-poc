@@ -1,8 +1,8 @@
 "use client";
 
 // Inline counterfactual surface for a timeline row. Communicates the
-// alternative outcome — what a quorum oracle (or no-failsafe contract)
-// would have done — in one glance, with severity-coded styling.
+// alternative outcome (what a quorum oracle, or no-failsafe contract,
+// would have done) in one glance, with severity-coded styling.
 
 import { TrendingDown, AlertTriangle, Equal } from "lucide-react";
 
@@ -14,7 +14,7 @@ interface Props {
   /** One-line description of the alternative's outcome. */
   summary: string;
   severity: Severity;
-  /** When false, the agent and alternative agree — the badge fades back. */
+  /** When false, the agent and alternative agree, so the badge fades back. */
   divergesFromAgent: boolean;
 }
 

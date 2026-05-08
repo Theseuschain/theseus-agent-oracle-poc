@@ -137,7 +137,7 @@ export function mockTamper(venue: VenueReading["venue"], priceUsd: number): void
   state.refused = true;
 
   // Compare against a venue that *isn't* the tampered one. The reconciliation
-  // policy fires when the tampered venue diverges from the others — so the
+  // policy fires when the tampered venue diverges from the others, so the
   // message should name the venue we're comparing against.
   const reference = venue === "coinbase" ? "binance" : "coinbase";
   const referencePrice = 3502.4;

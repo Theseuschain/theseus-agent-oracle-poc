@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
  * display, the text flashes by and the "watch the agent think"
  * effect is lost. This hook grows the rendered slice toward the
  * full streamed target at ~100 chars/sec, so the reader can follow
- * along while DeepSeek is still pushing tokens — and after the
+ * along while DeepSeek is still pushing tokens, and after the
  * stream completes, the typewriter keeps catching up to the final
  * reasoning so the transition to the static view feels smooth.
  *

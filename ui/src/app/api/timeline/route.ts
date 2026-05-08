@@ -15,7 +15,7 @@ export async function GET() {
     }
   }
 
-  // Mock mode — the client owns the timeline state. Return an empty array
+  // Mock mode: the client owns the timeline state. Return an empty array
   // so the client falls through to its derived timeline.
   return NextResponse.json({ mode: "mock", entries: [] });
 }

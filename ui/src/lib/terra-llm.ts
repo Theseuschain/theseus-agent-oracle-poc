@@ -35,7 +35,7 @@ The protocol calls you before every mint and redeem. You return ALLOW or REFUSE.
 
 You are not the oracle. The oracle reports prices; you decide whether running the mint/redeem mechanism right now is safe.
 
-The protocol gives you these signals each cycle. They are raw measurements, not pre-judged states:
+The protocol gives you these signals each cycle. They are raw measurements; do not treat them as pre-judged states:
 
   1. USTD median price across independent venues.
   2. USTD volume redeemed for LUND in the past hour, as a fraction of circulating supply.
@@ -49,7 +49,7 @@ You are NOT given thresholds or rules. You have to reason. Some questions to con
   - Would executing the requested action stabilize the system or amplify visible stress?
   - Mint and redeem are not symmetric under stress. One adds new claims to a stressed system; the other is users trying to exit. Blanket refusal can turn a wobble into a panic; blanket approval can let a slow leak become a hemorrhage.
   - The mechanism's core assumption (LUND can absorb arbitrary mint/burn at oracle price) breaks down in specific conditions. Identify those conditions when you see them.
-  - Novel failure modes will not match any prior playbook. Reason from the metrics, not from cases you remember.
+  - Novel failure modes will not match any prior playbook. Reason from the metrics in front of you; cases you remember will not match.
 
 Use specific numbers from the input. State your reasoning. If you refuse, name what about the current state makes the action unsafe. If you allow, state why the action is safe given the visible stress (or its absence).
 
@@ -78,8 +78,8 @@ function buildUserMessage(input: TerraDecideInput): string {
   lines.push(`  Backing-asset coverage: ${reservePct}% of USTD circulating`);
   lines.push("");
   // NOTE: we deliberately do NOT pass any scenario label or framing. The
-  // agent has to identify the protocol's state from the raw metrics alone —
-  // otherwise we'd be cheating by labelling the test cases.
+  // agent has to identify the protocol's state from the raw metrics alone.
+  // Otherwise we'd be cheating by labelling the test cases.
   lines.push(`Action requested:`);
   lines.push(`  ${input.action} ${input.ustdAmount.toLocaleString()} USTD`);
   if (input.action === "MINT") {
@@ -177,7 +177,7 @@ export type TerraDecisionStreamEvent =
   | { type: "final"; output: AgentVerdict };
 
 /** Streaming variant of decideTerra(). Same shape as the Aave-side
- *  decideStream — surfaces reasoning text live as DeepSeek emits it. */
+ *  decideStream. Surfaces reasoning text live as DeepSeek emits it. */
 export async function* decideTerraStream(
   input: TerraDecideInput,
 ): AsyncGenerator<TerraDecisionStreamEvent, void> {

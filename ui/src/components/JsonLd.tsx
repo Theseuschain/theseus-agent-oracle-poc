@@ -111,7 +111,7 @@ export function AdjudicatorJsonLd() {
     <AgentJsonLd
       agentId="5HsJ4xK2nL8pR3qY7mZ9wB1tF5dH6cV8aN2eW4xT6bP9sM3K"
       agentName="Prediction Market Adjudicator"
-      agentSummary="Reads a prediction market's resolution criteria and an evidence pack, decides whether the criteria are met, and signs the verdict under Proof of Agenthood. Output is one of YES, NO, TOO-EARLY, or AMBIGUOUS — never a probability."
+      agentSummary="Reads a prediction market's resolution criteria and an evidence pack, decides whether the criteria are met, and signs the verdict under Proof of Agenthood. Output is one of YES, NO, TOO-EARLY, or AMBIGUOUS, never a probability."
       pageUrl={`${SITE_URL}/adjudicate`}
       intentTypes={["adjudicate_market", "context_update"]}
     />

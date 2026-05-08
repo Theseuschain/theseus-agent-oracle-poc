@@ -55,7 +55,7 @@ export function PositionPanel({ position, feedRefused, loading, onAction }: Prop
               value={
                 position
                   ? `${formatNumber(position.collateralWeth, 4)} WETH`
-                  : "—"
+                  : "–"
               }
               hint={position ? formatUsd(position.collateralUsd) : ""}
             />
@@ -64,7 +64,7 @@ export function PositionPanel({ position, feedRefused, loading, onAction }: Prop
               value={
                 position
                   ? `${formatNumber(position.debtUsdc, 2)} USDC`
-                  : "—"
+                  : "–"
               }
               hint={position ? formatUsd(position.debtUsd) : ""}
             />
@@ -73,7 +73,7 @@ export function PositionPanel({ position, feedRefused, loading, onAction }: Prop
               value={
                 position
                   ? formatNumber(position.healthFactor, 3)
-                  : "—"
+                  : "–"
               }
               hint={position && position.healthFactor < 1.5 ? "near liquidation" : ""}
               hintColor={
@@ -165,7 +165,7 @@ export function PositionPanel({ position, feedRefused, loading, onAction }: Prop
           {feedRefused && !lastResult && (
             <p className="mt-4 text-xs text-fg-dim leading-relaxed">
               The agent refused to price ETH this round. Borrow and withdraw are halted by Aave's price-touching paths.
-              Repay and deposit still work — they don't depend on a fresh price.
+              Repay and deposit still work; they don't depend on a fresh price.
             </p>
           )}
         </>

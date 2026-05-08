@@ -75,11 +75,11 @@ export function VenueCard({ reading, onTamper, onReset, loading }: Props) {
         <span>
           {DEPTH_LABEL[venue]}{" "}
           <span className="text-fg tnum">
-            {reading?.depthUsd ? formatUsd(reading.depthUsd, { compact: true, decimals: 1 }) : "—"}
+            {reading?.depthUsd ? formatUsd(reading.depthUsd, { compact: true, decimals: 1 }) : "–"}
           </span>
         </span>
         <span>·</span>
-        <span>{reading ? formatAge(reading.ageSeconds) : "—"}</span>
+        <span>{reading ? formatAge(reading.ageSeconds) : "–"}</span>
       </div>
 
       {tamperOpen ? (

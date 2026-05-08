@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Prediction Market Adjudicator — A Theseus agent that reads, decides, and signs";
+  "Prediction Market Adjudicator. A Theseus agent that reads, decides, and signs.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -39,7 +39,7 @@ export default function OgImage() {
             >
               Theseus
             </span>
-            <span>/ adjudicator</span>
+            <span>/ prediction market adjudicator</span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div

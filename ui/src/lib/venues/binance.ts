@@ -2,7 +2,7 @@
  * Binance 24h ticker reader.
  *
  * Public API, no auth: GET /api/v3/ticker/24hr?symbol=ETHUSDT.
- * Returns lastPrice + quoteVolume (24h $ volume). Volume is a depth proxy —
+ * Returns lastPrice + quoteVolume (24h $ volume). Volume is a depth proxy:
  * weaker than an order-book read but the agent's reconciliation policy works
  * as long as Coinbase + Binance normally agree to within 50bps.
  */
@@ -36,7 +36,7 @@ export async function binanceTicker(symbol: string): Promise<VenueReading> {
         cache: "no-store",
       });
       if (!res.ok) {
-        // 451 / 403 from a region-blocked endpoint — try the next.
+        // 451 / 403 from a region-blocked endpoint; try the next.
         lastError = `http ${res.status}`;
         continue;
       }

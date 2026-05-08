@@ -148,7 +148,7 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
               />
               <p className="mt-1.5 text-[11px] leading-relaxed text-fg-dim">
                 On Theseus, this entire reasoning bundle is signed and
-                verifiable. You don&rsquo;t have to trust the operator —{" "}
+                verifiable. You don&rsquo;t have to trust the operator;{" "}
                 <a
                   href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
                   target="_blank"

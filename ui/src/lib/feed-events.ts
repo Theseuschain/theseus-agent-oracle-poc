@@ -2,7 +2,7 @@
  * Build the live-mode timeline by reading AgentPriceFeed's emitted events
  * (PriceUpdated, Refused). Each event contributes one TimelineEntry.
  *
- * The reasoning blob isn't on-chain — only its keccak256 hash is anchored
+ * The reasoning blob isn't on-chain. Only its keccak256 hash is anchored
  * (in the Refused event). The full reasoning lives in TensorCommit; fetching
  * it requires a Theseus runtime API that doesn't exist yet, so the live
  * timeline shows the structural decision and hash, with a "reasoning blob
@@ -12,7 +12,7 @@
 import { ADDRESSES, FEED_ABI, publicClient } from "./chain";
 import { TimelineEntry } from "./types";
 
-const LOOKBACK_BLOCKS = 5_000n; // ~8h at 6s/block — plenty for a demo
+const LOOKBACK_BLOCKS = 5_000n; // ~8h at 6s/block, plenty for a demo
 
 export async function readTimelineFromEvents(): Promise<TimelineEntry[]> {
   if (!ADDRESSES.feed) return [];

@@ -2,7 +2,7 @@
  * Coinbase order book reader.
  *
  * Public API, no auth: GET /products/{symbol}/book?level=2.
- * level=2 returns aggregated bids/asks — sufficient for a depth calc.
+ * level=2 returns aggregated bids/asks; sufficient for a depth calc.
  *
  * Mirrors the Rust impl at tools/src/coinbase_orderbook.rs so the UI shows
  * the same numbers the agent would see.

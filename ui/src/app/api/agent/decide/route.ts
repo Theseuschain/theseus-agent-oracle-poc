@@ -4,7 +4,7 @@ import { sse } from "@/lib/llm-stream";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 35;
-// Force Node.js runtime (not Edge) — DeepSeek SSE iteration uses async
+// Force Node.js runtime (not Edge). DeepSeek SSE iteration uses async
 // generators that work fine here, and the streaming Response hands the
 // body straight to the client.
 export const runtime = "nodejs";

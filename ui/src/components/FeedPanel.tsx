@@ -32,13 +32,13 @@ export function FeedPanel({ feed, loading }: Props) {
 
       <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8 text-sm">
         <Stat label="Last update">
-          {feed ? formatAge(feed.ageSeconds) : "—"}
+          {feed ? formatAge(feed.ageSeconds) : "–"}
         </Stat>
-        <Stat label="Block">{feed ? formatBlock(feed.block) : "—"}</Stat>
+        <Stat label="Block">{feed ? formatBlock(feed.block) : "–"}</Stat>
         <Stat label="Reason hash" mono>
           {feed?.reasonHash && feed.reasonHash !== "0x0000000000000000000000000000000000000000000000000000000000000000"
             ? formatHash(feed.reasonHash, 4, 4)
-            : "—"}
+            : "–"}
         </Stat>
       </div>
     </div>

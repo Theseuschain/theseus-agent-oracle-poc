@@ -3,8 +3,8 @@
 // Both agent demos (Aave oracle, Terra failsafe) ask DeepSeek to return
 // strict JSON with a `reasoning` field. While the model streams that
 // JSON token by token, we want to surface the reasoning text live in
-// the timeline — the wow-factor on first paint comes from watching the
-// agent think, not from waiting 3 seconds for a verdict to drop.
+// the timeline. The wow-factor on first paint comes from watching the
+// agent think instead of waiting 3 seconds for a verdict to drop.
 //
 // This file holds:
 //   - extractPartialReasoning: state-machine that pulls the

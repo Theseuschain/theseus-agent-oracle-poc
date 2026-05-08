@@ -13,7 +13,7 @@
  *  - stale-data signatures
  *  - real flash crashes that look like attacks but aren't
  *
- * Server-side only — DEEPSEEK_API_KEY never reaches the browser.
+ * Server-side only. DEEPSEEK_API_KEY never reaches the browser.
  */
 
 import { Decision, TimelineEntry, VenueReading } from "./types";
@@ -36,7 +36,7 @@ export interface AgentDecisionOutput {
   /** Latency of the LLM call, ms. */
   latencyMs: number;
   model: string;
-  /** What we sent to the model — surfaced in the demo's inspect panel. */
+  /** What we sent to the model. Surfaced in the demo's inspect panel. */
   prompt: { system: string; user: string };
   /** Raw content string the model returned (before JSON parsing). */
   rawResponse: string;
@@ -55,7 +55,7 @@ Each cycle, you receive readings from three independent venues:
 
 For each reading you see: venue name, price, depth, age in seconds, and whether the venue reported successfully.
 
-You also see a cached reference price — the depth-weighted median of recent clean readings, snapshotted before any user action that could distort it.
+You also see a cached reference price: the depth-weighted median of recent clean readings, snapshotted before any user action that could distort it.
 
 You decide PRICED or REFUSED.
 
@@ -111,7 +111,7 @@ function buildUserMessage(input: AgentDecisionInput): string {
     }
     lines.push("");
   }
-  // No scenario hint or framing — the agent has to identify the protocol
+  // No scenario hint or framing. The agent has to identify the protocol
   // state from the venue readings alone.
   lines.push("Decide: PRICED or REFUSED. Return JSON only.");
   return lines.join("\n");

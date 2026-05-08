@@ -85,7 +85,7 @@ function TimelineRow({
   const typewriterCaughtUp =
     !!e.reasoning && typedReasoning.length >= e.reasoning.length;
   // While the typewriter is still catching up, keep showing the
-  // animated text instead of the static one-liner — even after the
+  // animated text instead of the static one-liner, even after the
   // verdict has landed.
   const stillTyping = !!e.reasoning && !typewriterCaughtUp;
   const oneLiner =
@@ -138,7 +138,7 @@ function TimelineRow({
                 <span className="text-fg-dim break-words">{e.reason ?? "venue divergence"}</span>
               ) : (
                 <>
-                  {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "—"}
+                  {e.priceUsd !== undefined ? formatUsd(e.priceUsd) : "–"}
                   {e.maxDeviationBps !== undefined && (
                     <span className="text-fg-mute ml-3">
                       max deviation {e.maxDeviationBps.toFixed(0)}bps
@@ -176,7 +176,7 @@ function TimelineRow({
               />
               <p className="mt-1.5 text-[11px] leading-relaxed text-fg-dim">
                 On Theseus, this entire reasoning bundle is signed and
-                verifiable. You don&rsquo;t have to trust the operator —{" "}
+                verifiable. You don&rsquo;t have to trust the operator;{" "}
                 <a
                   href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
                   target="_blank"
@@ -261,7 +261,7 @@ function InspectPanel({ inspect }: { inspect: AgentInspect }) {
           <span className="text-fg-dim tnum">
             {inspect.referencePrice > 0
               ? formatUsd(inspect.referencePrice)
-              : "—"}
+              : "–"}
           </span>
         </div>
         {inspect.scenarioHint && (

@@ -19,7 +19,7 @@ export async function GET() {
         });
       }
     } catch (e: unknown) {
-      // Swallow and fall back to mock — the UI still works pre-deploy.
+      // Swallow and fall back to mock. The UI still works pre-deploy.
       console.warn("[api/feed] live read failed, using mock", e);
     }
   }

@@ -14,7 +14,7 @@
 export interface BrowserConfig {
   evmRpc: string;
   chainId: number;
-  // EVM-side contract addresses. All optional — when missing, the UI
+  // EVM-side contract addresses. All optional; when missing, the UI
   // falls back to mock mode.
   agentPriceFeed?: `0x${string}`;
   pool?: `0x${string}`;
@@ -39,7 +39,7 @@ const browserDefaults = {
   // (PolkaVM / pallet-revive backend). Match the lz-local convention from
   // github.com/Theseuschain/theseus-layerzero-evm.
   evmRpc: "http://127.0.0.1:8545",
-  chainId: 420_420_420, // Theseus devnet — overridden via NEXT_PUBLIC_CHAIN_ID
+  chainId: 420_420_420, // Theseus devnet; overridden via NEXT_PUBLIC_CHAIN_ID
 } as const;
 
 const serverDefaults = {
@@ -66,7 +66,7 @@ export function getBrowserConfig(): BrowserConfig {
   };
 }
 
-/** Server-side config. Includes the admin seed — never import from a
+/** Server-side config. Includes the admin seed; never import from a
  *  client component. */
 export function getServerConfig(): ServerConfig {
   return {
@@ -77,7 +77,7 @@ export function getServerConfig(): ServerConfig {
 }
 
 /** True when enough deployment artifacts are present to flip from
- *  mock to live mode. AgentPriceFeed is the linchpin — without its
+ *  mock to live mode. AgentPriceFeed is the linchpin; without its
  *  address the feed panel has nothing to read. */
 export function hasLiveDeployment(cfg: BrowserConfig): boolean {
   return !!cfg.agentPriceFeed;

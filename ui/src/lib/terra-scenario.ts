@@ -8,7 +8,7 @@
  * Difference from a real on-chain protocol: an LLM agent gates every
  * mint / redeem call. The protocol invokes the agent first; if the
  * agent REFUSES, the action reverts. A smart contract running this
- * mechanism without an agent is exactly what melted in May 2022 — the
+ * mechanism without an agent is exactly what melted in May 2022, and the
  * counterfactual badge on each row makes that visible.
  */
 

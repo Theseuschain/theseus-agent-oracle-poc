@@ -1,10 +1,10 @@
-// Counterfactual computation — "what would have happened without the
+// Counterfactual computation: "what would have happened without the
 // agent." For each agent decision, we compute the outcome a venue-quorum
 // oracle (Chainlink-shape: median of N feeds, no abstain) would have
 // produced, plus the protocol-level damage that would have followed.
 //
 // The point of the demo isn't that the agent refused. The point is that
-// the alternative — what every existing oracle does — would have eaten
+// the alternative (what every existing oracle does) would have eaten
 // the loss. This module makes that visible at a glance.
 
 import type {
@@ -33,8 +33,8 @@ export type AaveCounterfactual = {
   quorumPrice?: number;
   /** One-line summary of the protocol-level cost. */
   costSummary: string;
-  /** "low" — agent and quorum agree, no harm; "med" — quorum exposes
-   *  some risk; "high" — quorum prints a manipulated price. Drives the
+  /** "low": agent and quorum agree, no harm. "med": quorum exposes
+   *  some risk. "high": quorum prints a manipulated price. Drives the
    *  visual treatment. */
   severity: "low" | "med" | "high";
   /** True when the agent's decision and the quorum oracle's decision
@@ -44,7 +44,7 @@ export type AaveCounterfactual = {
 
 /**
  * Median of the venue prices. Quorum oracles like Chainlink use a median
- * of N reporting feeds — robust to a single outlier, vulnerable when
+ * of N reporting feeds. Tolerates a single outlier, vulnerable when
  * every feed is the same shallow venue (the Mango shape).
  */
 function median(values: number[]): number {
@@ -117,14 +117,14 @@ export function aaveCounterfactual(
 
   // Case B: quorum's price agrees with reality (no manipulation, or
   // manipulation that cancels out via median). But the depth might be
-  // hollow — that's the depth-collapse scenario. If total depth is much
+  // hollow. That's the depth-collapse scenario. If total depth is much
   // smaller than the position size, large liquidations would clear the
   // visible book and slip into the void.
   if (totalDepth > 0 && totalDepth < POSITION_USD * 0.5) {
     return {
       quorumDecision: "PRICED",
       quorumPrice,
-      costSummary: `Quorum: PRICED ${fmtUsd(quorumPrice)} (matches real). But total depth is ${fmtUsd(totalDepth)} — a ${fmtUsd(POSITION_USD)} liquidation would clear the entire book and slip far below.`,
+      costSummary: `Quorum: PRICED ${fmtUsd(quorumPrice)} (matches real). But total depth is only ${fmtUsd(totalDepth)}. A ${fmtUsd(POSITION_USD)} liquidation would clear the entire book and slip far below.`,
       severity: "med",
       divergesFromAgent: agentDecision === "REFUSED",
     };
@@ -136,7 +136,7 @@ export function aaveCounterfactual(
     return {
       quorumDecision: "PRICED",
       quorumPrice,
-      costSummary: `Quorum: PRICED ${fmtUsd(quorumPrice)}. Agent and quorum agree — this is a real market move.`,
+      costSummary: `Quorum: PRICED ${fmtUsd(quorumPrice)}. Agent and quorum agree; this is a real market move.`,
       severity: "low",
       divergesFromAgent: false,
     };
@@ -163,7 +163,7 @@ export type TerraCounterfactual = {
 
 /**
  * What happens to the vault if we let the action proceed unconditionally
- * (the Terra-2022 default — no failsafe). For mints during stress, we
+ * (the Terra-2022 default with no failsafe). For mints during stress, we
  * project new USTD claims onto a system that's already failing. For
  * redeems during stress, we project the LUND issuance that would follow.
  */

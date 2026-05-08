@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /**
  * Reports whether the EVM RPC and substrate WS are reachable + which
  * deployment artifacts are configured. The header in the UI uses this to
- * show "live chain ✓" vs "live chain — substrate disconnected" vs "mock data".
+ * show "live chain ✓" vs "live chain (substrate disconnected)" vs "mock data".
  */
 export async function GET() {
   const cfg = getServerConfig();

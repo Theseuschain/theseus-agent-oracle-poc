@@ -2,7 +2,7 @@
  * Client-side mock scenario state.
  *
  * The display values for the three venues come from real exchange APIs
- * (Coinbase order book, Binance ticker, Uniswap V3 mainnet pool — see
+ * (Coinbase order book, Binance ticker, Uniswap V3 mainnet pool; see
  * /api/venues). Tamper / halt overrides are layered on top in React state.
  *
  * Three demo paths, each producing a structurally distinct refusal:
@@ -182,7 +182,7 @@ export function deriveFeed(state: ScenarioState): FeedSnapshot {
     };
   }
 
-  // First paint — no committed events. Synthesize a PRICED snapshot from
+  // First paint, no committed events. Synthesize a PRICED snapshot from
   // the live readings so the feed isn't blank.
   const venues = deriveVenues(state);
   const valid = venues.filter((v) => v.ok && v.depthUsd > 0);

@@ -4,13 +4,13 @@ import { findMarket } from "@/lib/adjudicator-markets";
 import { sse } from "@/lib/llm-stream";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 35;
+export const maxDuration = 90;
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
-      { error: "DEEPSEEK_API_KEY not configured on the server" },
+      { error: "ANTHROPIC_API_KEY not configured on the server" },
       { status: 503 },
     );
   }
