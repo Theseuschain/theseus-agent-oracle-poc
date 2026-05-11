@@ -7,6 +7,7 @@
  */
 
 import { ActionKind, AgentVerdict, VaultState } from "./terra-scenario";
+import { chainContextLines } from "./chain-context";
 import {
   extractPartialReasoning,
   readDeepSeekStream,
@@ -82,7 +83,7 @@ function buildUserMessage(input: TerraDecideInput): string {
   const priceChangePct = ((v.lundPriceChange24h - 1) * 100).toFixed(1);
   const reservePct = (v.reserveCoverage * 100).toFixed(1);
 
-  const lines: string[] = [];
+  const lines: string[] = [...chainContextLines("terra")];
   lines.push(`Vault state:`);
   lines.push(`  USTD circulating: ${(v.ustdSupply / 1e9).toFixed(2)}B`);
   lines.push(`  LUND circulating: ${(v.lundSupply / 1e6).toFixed(0)}M (24h supply growth ${supplyGrowthPct}%)`);

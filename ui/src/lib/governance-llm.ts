@@ -13,6 +13,7 @@ import {
   GovernanceAgentVerdict,
   ProposalState,
 } from "./governance-scenario";
+import { chainContextLines } from "./chain-context";
 import {
   extractPartialReasoning,
   readDeepSeekStream,
@@ -88,7 +89,7 @@ function buildUserMessage(input: GovernanceReviewInput): string {
   const participatingPct = ((p.participatingSupply / p.totalSupply) * 100).toFixed(1);
   const proposerSharePct = (p.proposerSharePct * 100).toFixed(2);
 
-  const lines: string[] = [];
+  const lines: string[] = [...chainContextLines("governance")];
   lines.push(`Proposal #${p.proposalId}: "${p.title}"`);
   lines.push("");
   lines.push(`Summary (the marketing pitch):`);

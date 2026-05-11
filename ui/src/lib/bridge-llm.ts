@@ -12,6 +12,7 @@ import {
   BridgeAgentVerdict,
   BridgeState,
 } from "./bridge-scenario";
+import { chainContextLines } from "./chain-context";
 import {
   extractPartialReasoning,
   readDeepSeekStream,
@@ -89,7 +90,7 @@ function buildUserMessage(input: BridgeDecideInput): string {
   const finalityLag = s.sourceHeight - s.finalizedHeight;
   const withdrawPct = (s.withdrawRate1h * 100).toFixed(2);
 
-  const lines: string[] = [];
+  const lines: string[] = [...chainContextLines("bridge")];
   lines.push("Source-chain and bridge state:");
   lines.push(
     `  Validators signing attestation: ${s.validatorsSigning} of ${s.validatorsTotal} (${sigPct}%); quorum is ${s.validatorQuorum}.`,

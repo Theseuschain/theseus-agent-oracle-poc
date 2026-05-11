@@ -17,6 +17,7 @@
  */
 
 import { Decision, TimelineEntry, VenueReading } from "./types";
+import { chainContextLines } from "./chain-context";
 import {
   extractPartialReasoning,
   readDeepSeekStream,
@@ -102,7 +103,7 @@ function formatVenue(v: VenueReading): string {
 }
 
 function buildUserMessage(input: AgentDecisionInput): string {
-  const lines: string[] = [];
+  const lines: string[] = [...chainContextLines("aave")];
   lines.push("Current cycle:");
   lines.push("");
   lines.push("Venues:");

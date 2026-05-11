@@ -11,6 +11,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { chainContextLines } from "./chain-context";
 import type { Citation, PredictionMarket } from "./adjudicator-markets";
 
 export interface AdjudicateInput {
@@ -68,25 +69,23 @@ Reason in natural prose as you go (the user sees it live). After your reasoning,
 function buildUserMessage(market: PredictionMarket): string {
   const today = new Date().toISOString().slice(0, 10);
   const optionsList = market.options
-    .map((o, i) => `  ${i}. ${o}`)
+    .map((o, i) => `    ${i}. ${o}`)
     .join("\n");
-  return `Please resolve this prediction market:
-
-**Market ID**: ${market.marketId}
-
-**Question**: ${market.question}
-
-**Options** (0-indexed, pick by index number):
-${optionsList}
-
-**Resolution Criteria**: ${market.resolutionCriteria}
-
-**Verification Source**: ${market.resolutionSource}
-
-**Deadline**: ${market.deadline}
-**Today**: ${today}
-
-Search the web for evidence, then return your verdict as the final JSON line.`;
+  const lines: string[] = [...chainContextLines("adjudicator")];
+  lines.push("Market:");
+  lines.push(`  id: ${market.marketId}`);
+  lines.push(`  question: ${market.question}`);
+  lines.push("  options (0-indexed, pick by index number):");
+  lines.push(optionsList);
+  lines.push(`  resolution criteria: ${market.resolutionCriteria}`);
+  lines.push(`  verification source: ${market.resolutionSource}`);
+  lines.push(`  deadline: ${market.deadline}`);
+  lines.push(`  today: ${today}`);
+  lines.push("");
+  lines.push(
+    "Search the web for evidence, then return your verdict as the final JSON line.",
+  );
+  return lines.join("\n");
 }
 
 export type AdjudicateStreamEvent =
