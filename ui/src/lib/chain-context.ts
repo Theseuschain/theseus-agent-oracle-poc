@@ -27,7 +27,8 @@ export type CallerKey =
   | "terra"
   | "bridge"
   | "governance"
-  | "adjudicator";
+  | "adjudicator"
+  | "aviation";
 
 const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   aave: {
@@ -49,6 +50,10 @@ const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   adjudicator: {
     addr: "0xe7e4c1b5a8d2c6b9a3f0c7e2d9b4f1a6c3d8e5b2",
     label: "PredictionMarketResolver",
+  },
+  aviation: {
+    addr: "0xf1c8e6d4b2a9c7e5d3b1f8a6c4e2d0b9f7a5c3e1",
+    label: "AircraftCertificationAuthority",
   },
 };
 

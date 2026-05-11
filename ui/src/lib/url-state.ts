@@ -60,6 +60,12 @@ export type GovernanceUrlState = {
   preset?: GovernancePreset;
 };
 
+export type AviationPreset = "routine" | "fadec" | "mcasShape" | "eicas";
+
+export type AviationUrlState = {
+  preset?: AviationPreset;
+};
+
 export function readAaveUrl(search: string): AaveUrlState {
   const p = new URLSearchParams(search);
   const raw = p.get("scenario");
@@ -158,6 +164,23 @@ export function readGovernanceUrl(search: string): GovernanceUrlState {
 }
 
 export function writeGovernanceUrl(state: GovernanceUrlState): string {
+  const params = new URLSearchParams();
+  if (state.preset) params.set("preset", state.preset);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function readAviationUrl(search: string): AviationUrlState {
+  const p = new URLSearchParams(search);
+  const presetRaw = p.get("preset");
+  const valid: AviationPreset[] = ["routine", "fadec", "mcasShape", "eicas"];
+  const preset = valid.includes(presetRaw as AviationPreset)
+    ? (presetRaw as AviationPreset)
+    : undefined;
+  return { preset };
+}
+
+export function writeAviationUrl(state: AviationUrlState): string {
   const params = new URLSearchParams();
   if (state.preset) params.set("preset", state.preset);
   const qs = params.toString();

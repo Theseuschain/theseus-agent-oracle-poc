@@ -141,3 +141,15 @@ export function GovernanceReviewerJsonLd() {
     />
   );
 }
+
+export function AviationSafetyReviewerJsonLd() {
+  return (
+    <AgentJsonLd
+      agentId="5JhT2nQ8eP6mY4dR1bL9wK3vF7cN5aZ8sH2gM6xV1oCb"
+      agentName="Aviation Safety Reviewer"
+      agentSummary="Independent type-certification reviewer for aircraft changes. Reads the proposed change, the technical summary, and safety-relevant signals (single-sensor flight-control triggers, pilot-override capability, training-class proportionality, FCOM disclosure), then posts APPROVE, CAUTION, or REJECT. Designed to catch the structural shape of the 737 MAX MCAS certification."
+      pageUrl={`${SITE_URL}/aviation`}
+      intentTypes={["review_type_certification", "context_update"]}
+    />
+  );
+}

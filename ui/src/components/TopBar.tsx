@@ -44,6 +44,12 @@ export function TopBar({ mode }: Props) {
               shortLabel="Governance"
               pathname={pathname}
             />
+            <Tab
+              href="/aviation"
+              label="Aviation Safety Reviewer"
+              shortLabel="Aviation"
+              pathname={pathname}
+            />
           </nav>
         </div>
         <div className="flex items-center gap-4">
