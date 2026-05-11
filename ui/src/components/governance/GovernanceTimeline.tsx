@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  ArrowUpRight,
 } from "lucide-react";
 import { GovernanceTimelineEntry } from "@/lib/governance-scenario";
 import { useTypewriter } from "@/lib/use-typewriter";
@@ -50,14 +51,30 @@ export function GovernanceTimeline({ entries }: Props) {
   );
 }
 
+// Surface the agent's CONCLUSION as the one-liner, not its first
+// observation. Find the verdict verb and walk backwards for context.
 function reasoningOneLiner(reasoning: string): string | undefined {
-  const parts = reasoning.split(/(?<=[.!?])\s+/);
-  if (parts.length === 0) return undefined;
-  const first = parts[0].trim();
-  if (first.length < 40 && parts.length > 1) {
-    return parts.slice(0, 2).join(" ").trim();
+  const sentences = reasoning
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length === 0) return undefined;
+  const verdictVerbs =
+    /\b(Refusing|Allowing|Approving|Cautioning|Rejecting|Pricing)\b/;
+  let endIdx = sentences.length - 1;
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    if (verdictVerbs.test(sentences[i])) {
+      endIdx = i;
+      break;
+    }
   }
-  return first;
+  const parts: string[] = [sentences[endIdx]];
+  let i = endIdx - 1;
+  while (i >= 0 && parts.join(" ").length < 120) {
+    parts.unshift(sentences[i]);
+    i--;
+  }
+  return parts.join(" ");
 }
 
 function decisionPalette(d?: "APPROVE" | "CAUTION" | "REJECT"): {
@@ -192,6 +209,19 @@ function Row({ entry }: { entry: GovernanceTimelineEntry }) {
                     inspect input/output
                   </button>
                 )}
+                <button
+                  className="mono text-[10px] text-fg-dim hover:text-coral flex items-center gap-1 ml-auto"
+                  onClick={() => {
+                    const el = document.getElementById("governance-scenarios");
+                    if (el) {
+                      el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    } else {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                >
+                  try another scenario <ArrowUpRight size={10} />
+                </button>
               </div>
             </>
           )}

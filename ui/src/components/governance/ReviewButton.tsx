@@ -13,12 +13,9 @@ export function ReviewButton({ busy, pending, onSubmit }: Props) {
 
   return (
     <div className="surface p-4 sm:p-6">
-      <div className="eyebrow mb-3">Action</div>
-
-      <div className="grid grid-cols-1 gap-1 mb-4 p-1 rounded-[10px] bg-surface-2 border border-border">
-        <div className="mono text-xs py-2 px-3 rounded-[7px] bg-coral text-bg flex items-center justify-center gap-2">
-          <Gavel size={12} /> Review this proposal
-        </div>
+      <div className="flex items-center gap-2 mb-3">
+        <Gavel size={12} className="text-coral" />
+        <div className="eyebrow">Review this proposal</div>
       </div>
 
       <p className="text-xs text-fg-dim mb-3 leading-relaxed">

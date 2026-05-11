@@ -28,12 +28,22 @@ export function TopBar({ mode }: Props) {
               agents
             </span>
           </a>
-          <nav className="flex items-center gap-1 ml-2 p-0.5 rounded-[8px] bg-surface-2 border border-border">
+          <nav className="flex flex-wrap items-center gap-1 ml-2 p-0.5 rounded-[8px] bg-surface-2 border border-border">
             <Tab href="/" label="Aave Oracle" pathname={pathname} />
             <Tab href="/terra" label="Terra Failsafe" pathname={pathname} />
-            <Tab href="/adjudicate" label="Prediction Market Adjudicator" pathname={pathname} />
+            <Tab
+              href="/adjudicate"
+              label="Prediction Market Adjudicator"
+              shortLabel="Adjudicator"
+              pathname={pathname}
+            />
             <Tab href="/bridge" label="Bridge Guardian" pathname={pathname} />
-            <Tab href="/governance" label="Governance Reviewer" pathname={pathname} />
+            <Tab
+              href="/governance"
+              label="Governance Reviewer"
+              shortLabel="Governance"
+              pathname={pathname}
+            />
           </nav>
         </div>
         <div className="flex items-center gap-4">
@@ -81,7 +91,17 @@ export function TopBar({ mode }: Props) {
   );
 }
 
-function Tab({ href, label, pathname }: { href: string; label: string; pathname: string | null }) {
+function Tab({
+  href,
+  label,
+  shortLabel,
+  pathname,
+}: {
+  href: string;
+  label: string;
+  shortLabel?: string;
+  pathname: string | null;
+}) {
   const active = pathname === href;
   return (
     <Link
@@ -89,8 +109,16 @@ function Tab({ href, label, pathname }: { href: string; label: string; pathname:
       className={`mono text-[11px] py-1 px-2.5 rounded-[6px] transition ${
         active ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
       }`}
+      aria-label={label}
     >
-      {label}
+      {shortLabel ? (
+        <>
+          <span className="sm:hidden">{shortLabel}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </>
+      ) : (
+        label
+      )}
     </Link>
   );
 }

@@ -43,14 +43,31 @@ export function TerraTimeline({ entries }: Props) {
   );
 }
 
+// Surface the agent's CONCLUSION as the one-liner, not its first
+// observation. With the scratchpad-via-JSON prompt pattern, the
+// verdict and its load-bearing rationale live in the last sentences.
 function reasoningOneLiner(reasoning: string): string | undefined {
-  const parts = reasoning.split(/(?<=[.!?])\s+/);
-  if (parts.length === 0) return undefined;
-  const first = parts[0].trim();
-  if (first.length < 40 && parts.length > 1) {
-    return parts.slice(0, 2).join(" ").trim();
+  const sentences = reasoning
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length === 0) return undefined;
+  const verdictVerbs =
+    /\b(Refusing|Allowing|Approving|Cautioning|Rejecting|Pricing)\b/;
+  let endIdx = sentences.length - 1;
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    if (verdictVerbs.test(sentences[i])) {
+      endIdx = i;
+      break;
+    }
   }
-  return first;
+  const parts: string[] = [sentences[endIdx]];
+  let i = endIdx - 1;
+  while (i >= 0 && parts.join(" ").length < 120) {
+    parts.unshift(sentences[i]);
+    i--;
+  }
+  return parts.join(" ");
 }
 
 function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolean }) {

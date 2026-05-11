@@ -157,21 +157,22 @@ export default function BridgePage() {
               Bridge Guardian
             </h1>
             <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              A cross-chain bridge whose destination-side releases are gated by
-              a Theseus agent. Pick a source-chain state (validator outage,
-              Ronin-shape compromise, Wormhole-shape forged signature,
-              Nomad-shape replay), click <span className="text-fg">Release</span>,
-              and watch the guardian reason about whether the withdrawal is
-              safe.
+              A cross-chain bridge whose destination-side releases are gated
+              by a Theseus agent. Pick a source-chain state, click{" "}
+              <span className="text-fg">Release</span>, and watch the guardian
+              reason about whether the withdrawal is safe. Presets cover the
+              Ronin, Wormhole, and Nomad attack shapes.
             </p>
           </header>
 
-          <BridgeScenarioControls
-            agentPending={scenario.pending}
-            presetLabel={scenario.presetLabel}
-            onPreset={handlePreset}
-            onReset={handleReset}
-          />
+          <div id="bridge-scenarios">
+            <BridgeScenarioControls
+              agentPending={scenario.pending}
+              presetLabel={scenario.presetLabel}
+              onPreset={handlePreset}
+              onReset={handleReset}
+            />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <BridgePanel

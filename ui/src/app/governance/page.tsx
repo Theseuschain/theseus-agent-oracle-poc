@@ -160,12 +160,14 @@ export default function GovernancePage() {
             </p>
           </header>
 
-          <GovernanceScenarioControls
-            agentPending={scenario.pending}
-            presetLabel={scenario.presetLabel}
-            onPreset={handlePreset}
-            onReset={handleReset}
-          />
+          <div id="governance-scenarios">
+            <GovernanceScenarioControls
+              agentPending={scenario.pending}
+              presetLabel={scenario.presetLabel}
+              onPreset={handlePreset}
+              onReset={handleReset}
+            />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <ProposalPanel
