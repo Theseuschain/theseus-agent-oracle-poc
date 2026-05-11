@@ -66,6 +66,12 @@ export type AviationUrlState = {
   preset?: AviationPreset;
 };
 
+export type FundPreset = "calm" | "bullTrend" | "drawdown" | "blackSwan";
+
+export type FundUrlState = {
+  preset?: FundPreset;
+};
+
 export function readAaveUrl(search: string): AaveUrlState {
   const p = new URLSearchParams(search);
   const raw = p.get("scenario");
@@ -181,6 +187,23 @@ export function readAviationUrl(search: string): AviationUrlState {
 }
 
 export function writeAviationUrl(state: AviationUrlState): string {
+  const params = new URLSearchParams();
+  if (state.preset) params.set("preset", state.preset);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function readFundUrl(search: string): FundUrlState {
+  const p = new URLSearchParams(search);
+  const presetRaw = p.get("preset");
+  const valid: FundPreset[] = ["calm", "bullTrend", "drawdown", "blackSwan"];
+  const preset = valid.includes(presetRaw as FundPreset)
+    ? (presetRaw as FundPreset)
+    : undefined;
+  return { preset };
+}
+
+export function writeFundUrl(state: FundUrlState): string {
   const params = new URLSearchParams();
   if (state.preset) params.set("preset", state.preset);
   const qs = params.toString();

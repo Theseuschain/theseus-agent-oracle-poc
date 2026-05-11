@@ -153,3 +153,15 @@ export function AviationSafetyReviewerJsonLd() {
     />
   );
 }
+
+export function SovereignFundJsonLd() {
+  return (
+    <AgentJsonLd
+      agentId="5LkY9d2vH6mR8nQ1bX3cP5tF7eK4aV2sZ8wM5oG1pJqC"
+      agentName="Sovereign Fund"
+      agentSummary="Fully autonomous on-chain fund. Owns its own USDC and WETH, runs its own decision loop, and rebalances between the two assets based on market conditions and a written mandate. No human or contract calls it; the agent triggers itself on schedule. Each tick is signed and on-chain."
+      pageUrl={`${SITE_URL}/fund`}
+      intentTypes={["rebalance", "context_update"]}
+    />
+  );
+}

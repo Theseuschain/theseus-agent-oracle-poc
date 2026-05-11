@@ -28,7 +28,8 @@ export type CallerKey =
   | "bridge"
   | "governance"
   | "adjudicator"
-  | "aviation";
+  | "aviation"
+  | "fund";
 
 const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   aave: {
@@ -54,6 +55,15 @@ const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   aviation: {
     addr: "0xf1c8e6d4b2a9c7e5d3b1f8a6c4e2d0b9f7a5c3e1",
     label: "AircraftCertificationAuthority",
+  },
+  // Sovereign agents trigger themselves on their own schedule rather than
+  // being called by an external contract. The caller is the agent's own
+  // EVM-mapped address and the label flags the call as self-scheduled so
+  // an inspector can tell the difference between an external invocation
+  // and an autonomous tick.
+  fund: {
+    addr: "0x09a7c5b3e1d9f7a5c3e1b9d7f5a3c1e9b7d5f3a1",
+    label: "SovereignFund (self-scheduled tick)",
   },
 };
 
