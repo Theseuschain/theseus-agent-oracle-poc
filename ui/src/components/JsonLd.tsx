@@ -117,3 +117,27 @@ export function AdjudicatorJsonLd() {
     />
   );
 }
+
+export function BridgeGuardianJsonLd() {
+  return (
+    <AgentJsonLd
+      agentId="5KbR9w3jH8mTcQ2nL5pY7eB1xK4dV6sN8aZ3fW5tH9pM1vXc"
+      agentName="Bridge Guardian"
+      agentSummary="Gates destination-side releases on a cross-chain bridge. The bridge contract calls the agent before every withdraw; the agent reads source-chain state (validator quorum, finality lag, replay-protection nonce, attestation freshness) and either allows or refuses. Catches the structural shape of Ronin, Wormhole, and Nomad."
+      pageUrl={`${SITE_URL}/bridge`}
+      intentTypes={["gate_bridge_withdraw", "context_update"]}
+    />
+  );
+}
+
+export function GovernanceReviewerJsonLd() {
+  return (
+    <AgentJsonLd
+      agentId="5FmN8vY6cP1qK4xR7zL3jB9wE5dV8aS2hT6gM3fX9pZ7nCk2"
+      agentName="Governance Reviewer"
+      agentSummary="Reads DAO proposals and treasury state, posts an advisory verdict (APPROVE, CAUTION, or REJECT) before the vote opens. Catches governance-shaped exploits a contract can't reason about: flash-loan voting, dust-stake snipes, hostile forks, malicious calldata."
+      pageUrl={`${SITE_URL}/governance`}
+      intentTypes={["review_proposal", "context_update"]}
+    />
+  );
+}

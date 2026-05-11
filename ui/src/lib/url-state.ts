@@ -39,6 +39,27 @@ export type TerraUrlState = {
   preset?: TerraPreset;
 };
 
+export type BridgePreset =
+  | "healthy"
+  | "validatorOutage"
+  | "ronin"
+  | "wormhole"
+  | "nomad";
+
+export type BridgeUrlState = {
+  preset?: BridgePreset;
+};
+
+export type GovernancePreset =
+  | "routine"
+  | "dustStake"
+  | "hostileFork"
+  | "beanstalk";
+
+export type GovernanceUrlState = {
+  preset?: GovernancePreset;
+};
+
 export function readAaveUrl(search: string): AaveUrlState {
   const p = new URLSearchParams(search);
   const raw = p.get("scenario");
@@ -92,6 +113,51 @@ export function readTerraUrl(search: string): TerraUrlState {
 }
 
 export function writeTerraUrl(state: TerraUrlState): string {
+  const params = new URLSearchParams();
+  if (state.preset) params.set("preset", state.preset);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function readBridgeUrl(search: string): BridgeUrlState {
+  const p = new URLSearchParams(search);
+  const presetRaw = p.get("preset");
+  const valid: BridgePreset[] = [
+    "healthy",
+    "validatorOutage",
+    "ronin",
+    "wormhole",
+    "nomad",
+  ];
+  const preset = valid.includes(presetRaw as BridgePreset)
+    ? (presetRaw as BridgePreset)
+    : undefined;
+  return { preset };
+}
+
+export function writeBridgeUrl(state: BridgeUrlState): string {
+  const params = new URLSearchParams();
+  if (state.preset) params.set("preset", state.preset);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function readGovernanceUrl(search: string): GovernanceUrlState {
+  const p = new URLSearchParams(search);
+  const presetRaw = p.get("preset");
+  const valid: GovernancePreset[] = [
+    "routine",
+    "dustStake",
+    "hostileFork",
+    "beanstalk",
+  ];
+  const preset = valid.includes(presetRaw as GovernancePreset)
+    ? (presetRaw as GovernancePreset)
+    : undefined;
+  return { preset };
+}
+
+export function writeGovernanceUrl(state: GovernanceUrlState): string {
   const params = new URLSearchParams();
   if (state.preset) params.set("preset", state.preset);
   const qs = params.toString();
