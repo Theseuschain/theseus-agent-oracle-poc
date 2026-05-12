@@ -8,24 +8,43 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 }
 
+/// @notice Minimal Uniswap V3 SwapRouter interface (exactInputSingle only).
+///         Compatible with the canonical SwapRouter and SwapRouter02 on
+///         every chain that hosts Uniswap V3 (Sepolia, Base Sepolia,
+///         Arbitrum Sepolia, Optimism, etc.).
+interface ISwapRouter {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function exactInputSingle(ExactInputSingleParams calldata params)
+        external
+        payable
+        returns (uint256 amountOut);
+}
+
 /// @title SovereignFund
-/// @notice Commitment + execution surface for the sovereign-fund SHIP agent.
-///         Different shape from the other Theseus demos. Holds capital
-///         (USDC + WETH) and is controlled by the agent alone. The agent
-///         calls tick() on its own schedule with a signed decision; the
-///         contract records the decision and applies a mocked execution
-///         to its position state. A production deployment would wire
-///         _executeAt() to a DEX router (Uniswap V3 / similar).
+/// @notice On-chain fund controlled by a single SHIP agent. Holds USDC and
+///         WETH; the agent calls tick() on its own schedule to record a
+///         decision and execute the resulting swap through a Uniswap V3
+///         router. Append-only tick history is the audit log.
 ///
-///         The two distinguishing features versus the gate-shape agents:
-///           - The agent is the SOLE caller. Nobody else writes here.
-///           - The contract HOLDS funds. Verdicts are append-only history
-///             but the position state is the current ledger.
+///         Two distinguishing features versus the gate-shape agents on the
+///         poc:
+///           - The agent is the SOLE caller. Nobody else writes.
+///           - The contract HOLDS funds. Verdicts are append-only history;
+///             the token balances are the current ledger.
 ///
-///         Execution is mocked: the agent supplies the price at tick time
-///         and the contract adjusts balances accordingly. This is the
-///         demo's escape hatch; the function signature exposes where the
-///         DEX call would slot in.
+///         For the demo "centralized agent" deployment, the agent is just
+///         an EOA. The Theseus production version would have the agent be
+///         a SHIP-registered address that signs verdicts under PoA.
 contract SovereignFund {
     enum Action {
         HOLD,
@@ -33,22 +52,30 @@ contract SovereignFund {
         SELL_WETH
     }
 
-    /// @notice The SHIP agent's EVM-mapped address. Only this address can write.
+    /// @notice The agent's address. Only it can call tick().
     address public immutable agent;
 
-    /// @notice USDC and WETH tokens the fund holds. Set at construction.
+    /// @notice USDC and WETH tokens the fund holds.
     IERC20 public immutable usdc;
     IERC20 public immutable weth;
+
+    /// @notice Uniswap V3 SwapRouter for executing swaps.
+    ISwapRouter public immutable swapRouter;
+
+    /// @notice Pool fee tier for the USDC/WETH pool (e.g. 500 = 0.05%,
+    ///         3000 = 0.3%). Set once at deploy.
+    uint24 public immutable poolFee;
 
     string public description;
 
     struct Tick {
         Action action;
-        uint256 sizeUsd;          // USD-equivalent size of the trade; 0 for HOLD
-        uint256 priceUsd;         // WETH/USDC mid-price at tick time, scaled by 1e8
-        uint256 usdcAfter;        // USDC balance after execution (snapshot)
-        uint256 wethAfter;        // WETH balance after execution (snapshot, scaled by 1e18)
-        bytes32 reasonHash;       // keccak256 of the agent's reasoning blob
+        uint256 amountIn;          // input amount, in input-token decimals
+        uint256 amountOut;         // actual amount received from swap
+        uint256 minAmountOut;      // slippage floor the agent accepted
+        uint256 usdcAfter;         // USDC balance after tick (snapshot)
+        uint256 wethAfter;         // WETH balance after tick (snapshot)
+        bytes32 reasonHash;        // keccak256 of off-chain reasoning blob
         uint256 timestamp;
     }
 
@@ -58,8 +85,8 @@ contract SovereignFund {
     event Ticked(
         uint256 indexed tickIndex,
         Action indexed action,
-        uint256 sizeUsd,
-        uint256 priceUsd,
+        uint256 amountIn,
+        uint256 amountOut,
         uint256 usdcAfter,
         uint256 wethAfter,
         bytes32 reasonHash
@@ -68,7 +95,7 @@ contract SovereignFund {
     error NotAgent();
     error InvalidAction();
     error InsufficientBalance();
-    error InvalidPrice();
+    error SwapFailed();
 
     modifier onlyAgent() {
         if (msg.sender != agent) revert NotAgent();
@@ -79,56 +106,54 @@ contract SovereignFund {
         address agent_,
         IERC20 usdc_,
         IERC20 weth_,
+        ISwapRouter swapRouter_,
+        uint24 poolFee_,
         string memory description_
     ) {
         agent = agent_;
         usdc = usdc_;
         weth = weth_;
+        swapRouter = swapRouter_;
+        poolFee = poolFee_;
         description = description_;
     }
 
-    /// @notice Called by the SHIP agent on its own schedule. Records the
-    ///         agent's decision, applies mocked execution to the contract's
-    ///         token balances at the given price, and appends to history.
+    /// @notice Called by the agent on its own schedule. Records the
+    ///         decision and executes the corresponding swap.
     /// @param action HOLD, BUY_WETH, or SELL_WETH.
-    /// @param sizeUsd USD-equivalent size of the trade. Must be 0 if HOLD.
-    /// @param priceUsd WETH/USDC mid-price, scaled by 1e8.
+    /// @param amountIn Input amount, in input token's native decimals.
+    ///         For BUY_WETH this is USDC (6 decimals). For SELL_WETH this
+    ///         is WETH (18 decimals). Must be 0 if action is HOLD.
+    /// @param minAmountOut Slippage floor. The swap reverts if the router
+    ///         returns less than this. The agent computes this off-chain
+    ///         from its expected price and a slippage tolerance.
+    /// @param deadline Unix timestamp after which the swap must revert.
     /// @param reasonHash keccak256 of the agent's reasoning blob.
     function tick(
         Action action,
-        uint256 sizeUsd,
-        uint256 priceUsd,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 deadline,
         bytes32 reasonHash
     ) external onlyAgent {
-        if (priceUsd == 0) revert InvalidPrice();
-        if (action == Action.HOLD && sizeUsd != 0) revert InvalidAction();
+        if (action == Action.HOLD && amountIn != 0) revert InvalidAction();
+        if (action != Action.HOLD && amountIn == 0) revert InvalidAction();
 
-        // Mocked execution. A production wiring would call a DEX router
-        // here and accept actualOut/actualIn from the swap result.
+        uint256 amountOut = 0;
+
         if (action == Action.BUY_WETH) {
-            uint256 spend = sizeUsd * 1e6; // USDC has 6 decimals
-            if (usdc.balanceOf(address(this)) < spend) revert InsufficientBalance();
-            usdc.transfer(address(0xdEaD), spend);
-            // wethOut = sizeUsd / price (where price is scaled 1e8)
-            uint256 wethOut = (sizeUsd * 1e8 * 1e18) / priceUsd / 1e0;
-            // In a real wiring this would be the actual swap output. For
-            // the demo, the agent picks a fair price (the same one it sees)
-            // and we materialize WETH from thin air. Replace with router call.
-            _mintMockWeth(wethOut);
+            amountOut = _swap(usdc, weth, amountIn, minAmountOut, deadline);
         } else if (action == Action.SELL_WETH) {
-            uint256 wethIn = (sizeUsd * 1e8 * 1e18) / priceUsd;
-            if (weth.balanceOf(address(this)) < wethIn) revert InsufficientBalance();
-            weth.transfer(address(0xdEaD), wethIn);
-            uint256 usdcOut = sizeUsd * 1e6;
-            _mintMockUsdc(usdcOut);
+            amountOut = _swap(weth, usdc, amountIn, minAmountOut, deadline);
         }
 
         uint256 idx = ticks.length;
         ticks.push(
             Tick({
                 action: action,
-                sizeUsd: sizeUsd,
-                priceUsd: priceUsd,
+                amountIn: amountIn,
+                amountOut: amountOut,
+                minAmountOut: minAmountOut,
                 usdcAfter: usdc.balanceOf(address(this)),
                 wethAfter: weth.balanceOf(address(this)),
                 reasonHash: reasonHash,
@@ -138,12 +163,24 @@ contract SovereignFund {
         emit Ticked(
             idx,
             action,
-            sizeUsd,
-            priceUsd,
+            amountIn,
+            amountOut,
             usdc.balanceOf(address(this)),
             weth.balanceOf(address(this)),
             reasonHash
         );
+    }
+
+    /// @notice Withdraw a token to a recipient. Agent-only escape hatch
+    ///         (e.g. for migrating funds, redeeming profits). Append-only
+    ///         tick history still reflects every trade, so this is auditable.
+    function withdraw(IERC20 token, address to, uint256 amount) external onlyAgent {
+        if (!token.transfer(to, amount)) revert SwapFailed();
+    }
+
+    /// @notice Number of ticks recorded since deployment.
+    function tickCount() external view returns (uint256) {
+        return ticks.length;
     }
 
     /// @notice Latest tick. Reverts if no ticks have happened yet.
@@ -152,39 +189,37 @@ contract SovereignFund {
         return ticks[ticks.length - 1];
     }
 
-    /// @notice Number of ticks recorded since deployment.
-    function tickCount() external view returns (uint256) {
-        return ticks.length;
-    }
-
-    /// @notice Current portfolio NAV in USD-equivalent at the given price.
-    /// @param priceUsd WETH/USDC mid-price, scaled by 1e8.
-    function navUsd(uint256 priceUsd) external view returns (uint256) {
-        uint256 u = usdc.balanceOf(address(this)) / 1e6;
-        uint256 w = (weth.balanceOf(address(this)) * priceUsd) / 1e8 / 1e18;
-        return u + w;
-    }
-
     // ---------------------------------------------------------------
-    // Mocked execution hooks. In production these would be replaced by
-    // the DEX router call. They're internal and only reachable from
-    // tick(), which is onlyAgent, so they don't add any attack surface.
+    // Internal
     // ---------------------------------------------------------------
 
-    // Test environments hook into these via mock ERC20s with mint().
-    // We don't enforce a mint interface here; a real ERC20 would simply
-    // not implement them and tick() would revert during execution.
-    function _mintMockWeth(uint256 amount) internal {
-        (bool ok, ) = address(weth).call(
-            abi.encodeWithSignature("mint(address,uint256)", address(this), amount)
-        );
-        if (!ok) revert InsufficientBalance();
-    }
+    function _swap(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 deadline
+    ) internal returns (uint256 amountOut) {
+        if (tokenIn.balanceOf(address(this)) < amountIn) revert InsufficientBalance();
 
-    function _mintMockUsdc(uint256 amount) internal {
-        (bool ok, ) = address(usdc).call(
-            abi.encodeWithSignature("mint(address,uint256)", address(this), amount)
+        // Reset and set fresh allowance. Some ERC20s (USDT in particular)
+        // require setting to zero before changing a non-zero allowance.
+        // USDC and WETH don't, but the pattern is harmless and worth keeping.
+        tokenIn.approve(address(swapRouter), 0);
+        tokenIn.approve(address(swapRouter), amountIn);
+
+        amountOut = swapRouter.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: address(tokenIn),
+                tokenOut: address(tokenOut),
+                fee: poolFee,
+                recipient: address(this),
+                deadline: deadline,
+                amountIn: amountIn,
+                amountOutMinimum: minAmountOut,
+                sqrtPriceLimitX96: 0
+            })
         );
-        if (!ok) revert InsufficientBalance();
+        if (amountOut < minAmountOut) revert SwapFailed();
     }
 }
