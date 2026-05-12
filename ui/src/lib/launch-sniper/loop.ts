@@ -46,6 +46,7 @@ export interface LoopOutcome {
     hash: string;
     explorerUrl: string;
     reasonHash: string;
+    blobUrl: string | null;
   };
   paperUsdcAfter?: string;
   error?: string;
@@ -155,6 +156,7 @@ export async function runOneTick(): Promise<LoopOutcome> {
       hash: exec.txHash,
       explorerUrl: `https://sepolia.basescan.org/tx/${exec.txHash}`,
       reasonHash: exec.reasonHash,
+      blobUrl: exec.blobUrl,
     },
     paperUsdcAfter: paperUsdc.toString(),
   };

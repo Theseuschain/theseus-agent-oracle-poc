@@ -140,6 +140,54 @@ export const LAUNCH_SNIPER_FUND_ABI = [
     inputs: [],
     outputs: [{ type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "startingUsdc",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "agent",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    type: "function",
+    name: "description",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
+    name: "positions",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [
+      { name: "amount", type: "uint256" },
+      { name: "costBasisUsdc", type: "uint256" },
+      { name: "proceedsUsdc", type: "uint256" },
+      { name: "open", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "ticks",
+    stateMutability: "view",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [
+      { name: "action", type: "uint8" },
+      { name: "token", type: "address" },
+      { name: "amountToken", type: "uint256" },
+      { name: "amountUsdc", type: "uint256" },
+      { name: "paperUsdcAfter", type: "uint256" },
+      { name: "reasonHash", type: "bytes32" },
+      { name: "timestamp", type: "uint256" },
+    ],
+  },
 ] as const;
 
 export const ACTION = {

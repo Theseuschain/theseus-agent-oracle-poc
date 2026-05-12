@@ -29,6 +29,7 @@ import {
   LAUNCH_SNIPER_FUND_ABI,
   ERC20_ABI,
 } from "./abi";
+import { publishBlob } from "./blob-store";
 import {
   BASE_SEPOLIA_RPC,
   LAUNCH_SNIPER_FUND_SEPOLIA,
@@ -189,6 +190,7 @@ export async function executeTick(
   action: "PASS" | "BUY_TOKEN";
   reasonHash: Hex;
   blob: ReasonBlob;
+  blobUrl: string | null;
 }> {
   const wallet = getSepoliaWalletClient();
   const action =
@@ -196,13 +198,16 @@ export async function executeTick(
 
   if (action === "PASS") {
     const { blob, hash } = buildReasonBlob(dossier, decision, model);
+    // Publish the blob before the on-chain commit so verifiers reading
+    // the tx in the same window can already resolve the reasonHash.
+    const blobUrl = await publishBlob(hash, blob);
     const txHash = await wallet.writeContract({
       address: LAUNCH_SNIPER_FUND_SEPOLIA,
       abi: LAUNCH_SNIPER_FUND_ABI,
       functionName: "tick",
       args: [ACTION.PASS, dossier.token.address, 0n, 0n, hash],
     });
-    return { txHash, action, reasonHash: hash, blob };
+    return { txHash, action, reasonHash: hash, blob, blobUrl };
   }
 
   // BUY_TOKEN path: compute the paper fill and refuse to post if the
@@ -220,13 +225,14 @@ export async function executeTick(
         "Executor downgraded to PASS: pool uninitialized, WETH-quoted, or zero-price.",
     };
     const { blob, hash } = buildReasonBlob(dossier, downgraded, model);
+    const blobUrl = await publishBlob(hash, blob);
     const txHash = await wallet.writeContract({
       address: LAUNCH_SNIPER_FUND_SEPOLIA,
       abi: LAUNCH_SNIPER_FUND_ABI,
       functionName: "tick",
       args: [ACTION.PASS, dossier.token.address, 0n, 0n, hash],
     });
-    return { txHash, action: "PASS", reasonHash: hash, blob };
+    return { txHash, action: "PASS", reasonHash: hash, blob, blobUrl };
   }
 
   // Optional pool-depth sanity check.
@@ -245,13 +251,14 @@ export async function executeTick(
         `Executor downgraded: pool quote-side balance ${quoteInPool.toString()} is below intended spend ${fill.quoteAmount.toString()}. Passing.`,
     };
     const { blob, hash } = buildReasonBlob(dossier, downgraded, model);
+    const blobUrl = await publishBlob(hash, blob);
     const txHash = await wallet.writeContract({
       address: LAUNCH_SNIPER_FUND_SEPOLIA,
       abi: LAUNCH_SNIPER_FUND_ABI,
       functionName: "tick",
       args: [ACTION.PASS, dossier.token.address, 0n, 0n, hash],
     });
-    return { txHash, action: "PASS", reasonHash: hash, blob };
+    return { txHash, action: "PASS", reasonHash: hash, blob, blobUrl };
   }
 
   // Real BUY.
@@ -264,6 +271,7 @@ export async function executeTick(
       dossier.pool.priceQuotePerToken_1e18.toString(),
   };
   const { blob, hash } = buildReasonBlob(dossier, decision, model, paperFill);
+  const blobUrl = await publishBlob(hash, blob);
   const txHash = await wallet.writeContract({
     address: LAUNCH_SNIPER_FUND_SEPOLIA,
     abi: LAUNCH_SNIPER_FUND_ABI,
@@ -276,5 +284,5 @@ export async function executeTick(
       hash,
     ],
   });
-  return { txHash, action: "BUY_TOKEN", reasonHash: hash, blob };
+  return { txHash, action: "BUY_TOKEN", reasonHash: hash, blob, blobUrl };
 }
