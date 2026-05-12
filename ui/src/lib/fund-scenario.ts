@@ -71,11 +71,21 @@ export interface FundScenarioState {
   presetLabel: string;
 }
 
-/** Starting NAV: $1M, 50-50 by USD value. */
+/** Starting NAV: $1M, 50-50 by USD value at deploy. */
 export const STARTING_PORTFOLIO: FundPortfolio = {
   usdc: 500_000,
   weth: 500_000 / 2500, // 200 WETH at $2,500
 };
+
+/** WETH price at deploy time, used to compute the fund's cost basis in USD.
+ *  Stable reference: changing the market price (preset) shifts NAV but not
+ *  this number, so PnL displays show real capital impact, not just rebalance
+ *  effects. */
+export const DEPLOY_PRICE_USD = 2500;
+
+/** USD value of the fund at deploy time. Frozen reference for PnL display. */
+export const COST_BASIS_USD =
+  STARTING_PORTFOLIO.usdc + STARTING_PORTFOLIO.weth * DEPLOY_PRICE_USD;
 
 export const CALM_MARKET: MarketSnapshot = {
   wethPriceUsd: 2500,

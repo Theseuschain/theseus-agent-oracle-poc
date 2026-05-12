@@ -48,13 +48,21 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
         <Stat
           label="Primary-trigger sensors"
           value={String(c.primaryTriggerSensorCount)}
-          sub={c.primaryTriggerSensorCount === 1 ? "single point of failure" : "redundant"}
+          sub={
+            c.primaryTriggerSensorCount === 0
+              ? "no sensor trigger"
+              : c.primaryTriggerSensorCount === 1
+                ? "single point of failure"
+                : "redundant"
+          }
           health={
-            c.canActuateFlightControls && c.primaryTriggerSensorCount === 1
-              ? "crit"
-              : c.primaryTriggerSensorCount <= 1
-                ? "warn"
-                : "ok"
+            c.primaryTriggerSensorCount === 0
+              ? "ok"
+              : c.canActuateFlightControls && c.primaryTriggerSensorCount === 1
+                ? "crit"
+                : c.primaryTriggerSensorCount === 1
+                  ? "warn"
+                  : "ok"
           }
         />
         <Stat

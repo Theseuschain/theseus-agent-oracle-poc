@@ -1,9 +1,10 @@
 "use client";
 
 import {
+  COST_BASIS_USD,
+  DEPLOY_PRICE_USD,
   FundPortfolio,
   MarketSnapshot,
-  STARTING_PORTFOLIO,
   navUsd,
   usdcWeight,
 } from "@/lib/fund-scenario";
@@ -16,10 +17,11 @@ interface Props {
 
 export function PortfolioPanel({ portfolio, market, presetLabel }: Props) {
   const nav = navUsd(portfolio, market.wethPriceUsd);
-  const startingNav = navUsd(STARTING_PORTFOLIO, market.wethPriceUsd);
-  const pnlPct = startingNav > 0 ? ((nav / startingNav) - 1) * 100 : 0;
+  const pnlPct = ((nav - COST_BASIS_USD) / COST_BASIS_USD) * 100;
   const usdcPct = usdcWeight(portfolio, market.wethPriceUsd) * 100;
   const wethPct = 100 - usdcPct;
+  const priceMovedFromDeploy =
+    Math.abs(market.wethPriceUsd - DEPLOY_PRICE_USD) > 0.01;
 
   return (
     <div className="surface p-4 sm:p-6 lg:col-span-2">
@@ -35,8 +37,8 @@ export function PortfolioPanel({ portfolio, market, presetLabel }: Props) {
         <BigStat
           label="NAV"
           value={`$${nav.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-          sub={`PnL ${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}% vs start at current price`}
-          tone={pnlPct >= 0 ? "ok" : "warn"}
+          sub={`${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}% vs $${COST_BASIS_USD.toLocaleString()} cost basis`}
+          tone={pnlPct >= -1 ? "ok" : pnlPct >= -8 ? "warn" : "crit"}
         />
         <BigStat
           label="Allocation"
@@ -46,7 +48,9 @@ export function PortfolioPanel({ portfolio, market, presetLabel }: Props) {
               ? "below mandate floor (30% USDC)"
               : wethPct > 60
                 ? "above mandate ceiling (60% WETH)"
-                : "within mandate range"
+                : priceMovedFromDeploy
+                  ? "within mandate range (marked to current price)"
+                  : "within mandate range"
           }
           tone={usdcPct < 30 || wethPct > 60 ? "crit" : "ok"}
         />
