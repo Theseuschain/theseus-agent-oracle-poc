@@ -39,3 +39,14 @@ ui/tsconfig.tsbuildinfo
 .idea/
 .vscode/
 *.swp
+
+# Deployer / agent keys for contract scripts (testnet keys, gitignored regardless)
+contracts/.env
+contracts/.env.local
+
+# Foundry-installed libraries (each dev runs forge install themselves)
+contracts/lib/
+contracts/cache/
+contracts/out/
+contracts/out-pvm/
+contracts/foundry.lock
