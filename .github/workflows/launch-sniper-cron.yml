@@ -1,0 +1,44 @@
+name: launch-sniper-tick
+
+# Drives the Launch Sniper agent's loop. Replaces the Vercel cron we
+# could not use on Hobby tier (the */20 schedule fails Hobby's
+# daily-only cron policy and blocks all deploys at config-parse time).
+# GitHub Actions cron is free, runs from a beefy runner, and the
+# schedule has no plan-tier limits.
+
+on:
+  schedule:
+    # Every 20 minutes. GitHub cron's smallest interval is 5 min, so
+    # this fits well within free-tier limits.
+    - cron: "*/20 * * * *"
+  # Manual trigger from the Actions tab for debugging.
+  workflow_dispatch:
+
+jobs:
+  tick:
+    name: Fire one tick of the launch-sniper loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Hit the agent's tick endpoint
+        env:
+          ENDPOINT: ${{ vars.LAUNCH_SNIPER_TICK_URL }}
+        run: |
+          if [ -z "$ENDPOINT" ]; then
+            echo "::error::LAUNCH_SNIPER_TICK_URL repo variable is not set."
+            echo "Set it under repo Settings → Secrets and variables → Actions → Variables,"
+            echo "e.g. https://demo-agents.theseus.network/api/agent/launch-sniper/tick"
+            exit 1
+          fi
+          echo "POST $ENDPOINT"
+          HTTP_CODE=$(curl -sS -o /tmp/tick.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            --max-time 120 \
+            "$ENDPOINT")
+          echo "HTTP $HTTP_CODE"
+          cat /tmp/tick.json
+          # Treat 200 + 503 (env-not-configured) as expected;
+          # anything else fails the job and pings GitHub's actions UI.
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "503" ]; then
+            exit 1
+          fi
