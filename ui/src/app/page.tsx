@@ -122,7 +122,7 @@ const AGENTS: AgentCard[] = [
     href: "/fund",
     poaUrl:
       "https://theseus.network/poa/5LkY9d2vH6mR8nQ1bX3cP5tF7eK4aV2sZ8wM5oG1pJqC",
-    badge: "Live · Base Sepolia",
+    badge: "Live",
     badgeTone: "live",
   },
   {
@@ -131,11 +131,11 @@ const AGENTS: AgentCard[] = [
     kind: "Self-scheduled scout",
     pitch: "Watches Base for fresh launches. Mostly passes.",
     description:
-      "Polls Base mainnet for new Uniswap V3 pools, evaluates each new token's contract sanity + mint authority + LP lock + deployer history + holder concentration, and posts a paper-trade decision to its Base Sepolia LaunchSniperFund contract. Real signal, paper money — designed to graduate to real execution once the filter earns its keep.",
+      "Polls Base mainnet for new Uniswap V3 pools, evaluates each new token's contract sanity + mint authority + LP lock + deployer history + holder concentration, and commits a decision on-chain. Trades are paper (no real tokens move; the fund's USDC is a virtual ledger) so the filter can face real launch signal at zero capital risk. Graduates to real execution once the win rate is honest.",
     href: "/launch-sniper",
     poaUrl:
       "https://theseus.network/poa/5GnT4xK7eW2pR9qB6yA3sL5mZ1cV8dN4fH8jM2vXp7Q3hLb1",
-    badge: "Paper · Base Sepolia",
+    badge: "Paper trading",
     badgeTone: "paper",
   },
 ];
