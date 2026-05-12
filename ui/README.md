@@ -69,11 +69,11 @@ Standard Next.js app. Vercel works out of the box.
 
 1. Import the repo in Vercel; set **Root Directory** to `ui`.
 2. Set env vars from `.env.example`. `DEEPSEEK_API_KEY` should be marked **Sensitive**. Mock-mode runs with zero env vars.
-3. Project → **Settings → Domains** → Add `agent-oracle.theseus.network`.
+3. Project → **Settings → Domains** → Add `demo-agents.theseus.network`.
 4. Vercel shows a CNAME target (e.g. `cname.vercel-dns.com`). Add this DNS record at your registrar:
    ```
-   agent-oracle.theseus.network.  CNAME  cname.vercel-dns.com.
+   demo-agents.theseus.network.  CNAME  cname.vercel-dns.com.
    ```
 5. Wait for DNS propagation (typically <5 min). Vercel auto-provisions a Let's Encrypt cert.
 
-The canonical URL once configured: <https://agent-oracle.theseus.network>.
+The canonical URL once configured: <https://demo-agents.theseus.network>.

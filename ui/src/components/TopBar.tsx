@@ -15,21 +15,25 @@ export function TopBar({ mode }: Props) {
     <div className="border-b border-border bg-bg/70 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-baseline gap-3 flex-wrap">
-          <a
-            href="https://theseus.network"
-            className="flex items-baseline gap-2 group"
-            aria-label="theseus.network"
-          >
-            <span className="serif text-lg group-hover:text-coral transition">
+          <div className="flex items-baseline gap-2">
+            <a
+              href="https://theseus.network"
+              className="serif text-lg hover:text-coral transition"
+              aria-label="theseus.network"
+            >
               Theseus
-            </span>
+            </a>
             <span className="text-fg-mute mono text-xs">/</span>
-            <span className="mono text-[11px] uppercase tracking-wider text-fg-dim">
-              agents
-            </span>
-          </a>
+            <Link
+              href="/"
+              className="mono text-[11px] uppercase tracking-wider text-fg-dim hover:text-fg transition"
+              aria-label="Demo agents directory"
+            >
+              demo agents
+            </Link>
+          </div>
           <nav className="flex flex-wrap items-center gap-1 ml-2 p-0.5 rounded-[8px] bg-surface-2 border border-border">
-            <Tab href="/" label="Aave Oracle" pathname={pathname} />
+            <Tab href="/aave" label="Aave Oracle" pathname={pathname} />
             <Tab href="/terra" label="Terra Failsafe" pathname={pathname} />
             <Tab
               href="/adjudicate"
@@ -54,6 +58,12 @@ export function TopBar({ mode }: Props) {
               href="/fund"
               label="Sovereign Fund"
               shortLabel="Fund"
+              pathname={pathname}
+            />
+            <Tab
+              href="/launch-sniper"
+              label="Launch Sniper"
+              shortLabel="Sniper"
               pathname={pathname}
             />
           </nav>

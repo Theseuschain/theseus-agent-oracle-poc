@@ -105,7 +105,7 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            agent-oracle.theseus.network/fund
+            demo-agents.theseus.network/fund
           </div>
           <div style={{ display: "flex" }}>
             HOLD . BUY . SELL

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Bridge Guardian. A Theseus agent that gates cross-chain releases.";
+  "Theseus Agent Oracle: Aave V3 priced by an autonomous agent";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,12 +34,10 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
-            <span
-              style={{ fontFamily: "serif", fontSize: 22, color: "#e9e7e4" }}
-            >
+            <span style={{ fontFamily: "serif", fontSize: 22, color: "#e9e7e4" }}>
               Theseus
             </span>
-            <span>/ bridge guardian</span>
+            <span>/ agent oracle</span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div
@@ -64,7 +62,7 @@ export default function OgImage() {
               display: "flex",
             }}
           >
-            An agent that
+            Aave V3,
           </div>
           <div
             style={{
@@ -75,7 +73,7 @@ export default function OgImage() {
               display: "flex",
             }}
           >
-            sees across the chain.
+            priced by an autonomous agent.
           </div>
           <div
             style={{
@@ -87,10 +85,8 @@ export default function OgImage() {
               display: "flex",
             }}
           >
-            A Theseus agent that gates cross-chain releases on bridge
-            contracts. Reads validator quorum, finality lag, replay state,
-            attestation freshness; refuses what a quorum-only check would
-            ship.
+            Reads three independent venues, refuses when they disagree, and
+            catches the pump-the-venue exploit a quorum oracle would miss.
           </div>
         </div>
         <div
@@ -104,11 +100,9 @@ export default function OgImage() {
             borderTop: "1px solid #2b2a28",
           }}
         >
+          <div style={{ display: "flex" }}>demo-agents.theseus.network/aave</div>
           <div style={{ display: "flex" }}>
-            demo-agents.theseus.network/bridge
-          </div>
-          <div style={{ display: "flex" }}>
-            RONIN . WORMHOLE . NOMAD
+            Coinbase · Binance · Uniswap V3
           </div>
         </div>
       </div>

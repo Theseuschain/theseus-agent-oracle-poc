@@ -1,27 +1,25 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://agent-oracle.theseus.network";
-const LAST_MODIFIED = "2026-05-07";
+const BASE_URL = "https://demo-agents.theseus.network";
+const LAST_MODIFIED = "2026-05-11";
+
+const ROUTES: Array<{ path: string; priority: number }> = [
+  { path: "/", priority: 1.0 },
+  { path: "/aave", priority: 0.9 },
+  { path: "/terra", priority: 0.9 },
+  { path: "/adjudicate", priority: 0.9 },
+  { path: "/bridge", priority: 0.9 },
+  { path: "/governance", priority: 0.9 },
+  { path: "/aviation", priority: 0.9 },
+  { path: "/fund", priority: 0.9 },
+  { path: "/launch-sniper", priority: 0.85 },
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: `${BASE_URL}/`,
-      lastModified: LAST_MODIFIED,
-      changeFrequency: "weekly",
-      priority: 1.0,
-    },
-    {
-      url: `${BASE_URL}/terra`,
-      lastModified: LAST_MODIFIED,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/adjudicate`,
-      lastModified: LAST_MODIFIED,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-  ];
+  return ROUTES.map(({ path, priority }) => ({
+    url: `${BASE_URL}${path}`,
+    lastModified: LAST_MODIFIED,
+    changeFrequency: "weekly",
+    priority,
+  }));
 }

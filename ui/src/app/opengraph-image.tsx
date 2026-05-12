@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Theseus Agent Oracle: Aave V3 priced by an autonomous agent";
+  "Theseus demo agents: eight autonomous agents you can run in a browser tab.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,76 +34,71 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
-            <span style={{ fontFamily: "serif", fontSize: 22, color: "#e9e7e4" }}>
+            <span
+              style={{ fontFamily: "serif", fontSize: 22, color: "#e9e7e4" }}
+            >
               Theseus
             </span>
-            <span>/ agent oracle</span>
+            <span>/ demo agents</span>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: "#FF6F61",
-              }}
-            />
-            <span>live</span>
+          <span>demo-agents.theseus.network</span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div
+            style={{
+              fontFamily: "serif",
+              fontSize: 72,
+              lineHeight: 1.05,
+              letterSpacing: "-0.01em",
+              color: "#e9e7e4",
+              display: "flex",
+            }}
+          >
+            Eight autonomous agents,
+          </div>
+          <div
+            style={{
+              fontFamily: "serif",
+              fontSize: 72,
+              lineHeight: 1.05,
+              letterSpacing: "-0.01em",
+              color: "#ff7a59",
+              display: "flex",
+            }}
+          >
+            running in a browser tab.
+          </div>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: 19,
+              color: "#9a9892",
+              marginTop: 12,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 18,
+            }}
+          >
+            <span>oracle replacement</span>
+            <span>· mechanism gate</span>
+            <span>· proposal reviewer</span>
+            <span>· sovereign fund</span>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-          <div
-            style={{
-              fontSize: 84,
-              lineHeight: 1.05,
-              letterSpacing: -1.5,
-              color: "#FF6F61",
-              fontWeight: 400,
-              display: "flex",
-            }}
-          >
-            Aave V3,
-          </div>
-          <div
-            style={{
-              fontSize: 84,
-              lineHeight: 1.05,
-              letterSpacing: -1.5,
-              fontWeight: 400,
-              display: "flex",
-            }}
-          >
-            priced by an autonomous agent.
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              lineHeight: 1.4,
-              color: "#b9b6b0",
-              fontFamily: "sans-serif",
-              maxWidth: 980,
-              display: "flex",
-            }}
-          >
-            Reads three independent venues, refuses when they disagree, and
-            catches the pump-the-venue exploit a quorum oracle would miss.
-          </div>
-        </div>
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "baseline",
             fontFamily: "monospace",
-            fontSize: 18,
+            fontSize: 16,
             color: "#9a9892",
-            paddingTop: 20,
-            borderTop: "1px solid #2b2a28",
           }}
         >
-          <div style={{ display: "flex" }}>agent-oracle.theseus.network</div>
-          <div style={{ display: "flex" }}>
-            Coinbase · Binance · Uniswap V3
-          </div>
+          <span>Each posts a signed decision to a real chain.</span>
+          <span>Every system prompt is public on PoA.</span>
         </div>
       </div>
     ),

@@ -3,7 +3,7 @@
 // Linking the SoftwareApplication entries to those profiles via `sameAs`
 // helps search engines and AI crawlers connect the demo to the credential.
 
-const SITE_URL = "https://agent-oracle.theseus.network";
+const SITE_URL = "https://demo-agents.theseus.network";
 const POA_BASE = "https://theseus.network/poa";
 
 type AgentProps = {

@@ -104,7 +104,7 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            agent-oracle.theseus.network/adjudicate
+            demo-agents.theseus.network/adjudicate
           </div>
           <div style={{ display: "flex" }}>YES · NO · TOO-EARLY · AMBIGUOUS</div>
         </div>

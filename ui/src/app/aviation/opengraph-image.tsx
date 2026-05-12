@@ -105,7 +105,7 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            agent-oracle.theseus.network/aviation
+            demo-agents.theseus.network/aviation
           </div>
           <div style={{ display: "flex" }}>
             APPROVE . CAUTION . REJECT

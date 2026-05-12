@@ -104,7 +104,7 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            agent-oracle.theseus.network/terra
+            demo-agents.theseus.network/terra
           </div>
           <div style={{ display: "flex" }}>USTD · LUND · failsafe</div>
         </div>

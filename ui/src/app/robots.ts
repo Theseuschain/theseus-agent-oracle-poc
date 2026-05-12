@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://agent-oracle.theseus.network";
+const BASE_URL = "https://demo-agents.theseus.network";
 
 export default function robots(): MetadataRoute.Robots {
   return {
