@@ -180,7 +180,7 @@ function TickDetail({ tick }: { tick: TickRow }) {
       {!tick.blobUrl && (
         <div className="mono text-[11px] text-fg-mute">
           Blob storage not configured at write-time. The reason hash is the
-          full on-chain commitment; the reasoning blob isn&apos;t hosted yet
+          full commitment; the reasoning blob isn&apos;t hosted yet
           (set BLOB_READ_WRITE_TOKEN in production to enable).
         </div>
       )}

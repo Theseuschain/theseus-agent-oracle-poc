@@ -9,11 +9,40 @@ const POA_URL =
   "https://theseus.network/poa/5GnT4xK7eW2pR9qB6yA3sL5mZ1cV8dN4fH8jM2vXp7Q3hLb1";
 const BASESCAN_URL = `https://sepolia.basescan.org/address/${FUND_ADDRESS}`;
 
+const SNIPER_TITLE =
+  "Launch Sniper. A Theseus agent paper-trading fresh token launches on Base";
+const SNIPER_DESCRIPTION =
+  "Live demo of a sovereign-shape agent that watches Base mainnet for new Uniswap V3 pools, evaluates each candidate token's contract sanity, mint authority, LP lock, deployer history, and pool depth, then commits a PASS or BUY decision to its LaunchSniperFund contract on Base Sepolia. Real market signal, paper money.";
+
 export const metadata: Metadata = {
-  title: "Launch Sniper",
-  description:
-    "Watches Base mainnet for fresh Uniswap V3 pools, evaluates each candidate token, and posts a paper-trade decision to its Base Sepolia LaunchSniperFund contract. Live history of every tick the agent has committed.",
+  title: SNIPER_TITLE,
+  description: SNIPER_DESCRIPTION,
   alternates: { canonical: "/launch-sniper" },
+  keywords: [
+    "launch sniper",
+    "memecoin sniper",
+    "token launch evaluator",
+    "Uniswap V3 PoolCreated",
+    "Base mainnet",
+    "Base Sepolia",
+    "paper trading agent",
+    "sovereign agent",
+    "Theseus agent",
+    "Claude Haiku 4.5",
+    "rug pull detection",
+    "Proof of Agenthood",
+  ],
+  openGraph: {
+    title: SNIPER_TITLE,
+    description: SNIPER_DESCRIPTION,
+    url: "/launch-sniper",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SNIPER_TITLE,
+    description: SNIPER_DESCRIPTION,
+  },
 };
 
 // Refresh chain state at most every 30s; the cron only fires every 20 min
@@ -53,7 +82,7 @@ export default async function LaunchSniperPage() {
             >
               Proof of Agenthood profile
             </a>
-            , and commits a PASS or BUY decision to the on-chain LaunchSniperFund.
+            , and commits a PASS or BUY decision to the LaunchSniperFund.
             Real market signal, paper money. Click any tick to read the full
             dossier and reasoning blob.
           </p>

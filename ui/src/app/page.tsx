@@ -2,16 +2,41 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { TopBar } from "@/components/TopBar";
 
+const DIRECTORY_TITLE = "Theseus demo agents · browse eight autonomous agents";
+const DIRECTORY_DESCRIPTION =
+  "Eight Theseus agents you can run in a browser tab. Each reasons from raw inputs, signs every step, and publishes its verbatim system prompt on Proof of Agenthood. Covers price oracles, mechanism gates, governance reviewers, an aircraft type-certification reviewer, and two sovereign agents that own their own capital.";
+
 export const metadata: Metadata = {
-  title: "Demo agents",
-  description:
-    "Eight Theseus agents you can run in a browser. Each reasons from raw inputs, posts a signed decision blob to a real chain, and publishes its verbatim system prompt on Proof of Agenthood.",
+  title: DIRECTORY_TITLE,
+  description: DIRECTORY_DESCRIPTION,
   alternates: { canonical: "/" },
+  keywords: [
+    "Theseus demo agents",
+    "AI agent demos",
+    "autonomous agents",
+    "verifiable AI",
+    "agent oracle",
+    "DeFi failsafe",
+    "Aave oracle",
+    "Terra Luna failsafe",
+    "Bridge guardian",
+    "DAO governance reviewer",
+    "aviation safety reviewer",
+    "sovereign fund",
+    "launch sniper",
+    "prediction market resolver",
+    "Proof of Agenthood",
+  ],
   openGraph: {
-    title: "Theseus demo agents",
-    description:
-      "Browse eight autonomous agents: oracles, failsafes, reviewers, and sovereign funds. All running in a browser tab.",
+    title: DIRECTORY_TITLE,
+    description: DIRECTORY_DESCRIPTION,
+    url: "/",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DIRECTORY_TITLE,
+    description: DIRECTORY_DESCRIPTION,
   },
 };
 
@@ -116,7 +141,7 @@ const AGENTS: AgentCard[] = [
     slug: "fund",
     name: "Sovereign Fund",
     kind: "Self-scheduled trader",
-    pitch: "Autonomous on-chain fund. No human caller.",
+    pitch: "Autonomous agent-owned fund. No human caller.",
     description:
       "Owns its own USDC and WETH and runs a self-scheduled tick on its own clock. Reads market state, computes a target weight from its frozen mandate, executes the rebalance against its own balances through Uniswap V3. The first sovereign-shape agent in this set. No contract calls it; it triggers itself.",
     href: "/fund",
@@ -131,7 +156,7 @@ const AGENTS: AgentCard[] = [
     kind: "Self-scheduled scout",
     pitch: "Watches Base for fresh launches. Mostly passes.",
     description:
-      "Polls Base mainnet for new Uniswap V3 pools, evaluates each new token's contract sanity + mint authority + LP lock + deployer history + holder concentration, and commits a decision on-chain. Trades are paper (no real tokens move; the fund's USDC is a virtual ledger) so the filter can face real launch signal at zero capital risk. Graduates to real execution once the win rate is honest.",
+      "Polls Base mainnet for new Uniswap V3 pools, evaluates each new token's contract sanity + mint authority + LP lock + deployer history + holder concentration, and commits a signed decision the moment it decides. Trades are paper (no real tokens move; the fund's USDC is a virtual ledger) so the filter can face real launch signal at zero capital risk. Graduates to real execution once the win rate is honest.",
     href: "/launch-sniper",
     poaUrl:
       "https://theseus.network/poa/5GnT4xK7eW2pR9qB6yA3sL5mZ1cV8dN4fH8jM2vXp7Q3hLb1",
@@ -168,7 +193,7 @@ export default function Home() {
         <footer className="mt-16 pt-8 border-t border-border flex flex-wrap items-baseline justify-between gap-4">
           <p className="text-fg-dim text-[13px] leading-relaxed max-w-xl">
             These are demos. Some run on a real testnet (Base Sepolia); some run
-            against mocked state for narratability. The on-chain commitment
+            against mocked state for narratability. The commitment
             surface and the system prompt are real either way.
           </p>
           <a

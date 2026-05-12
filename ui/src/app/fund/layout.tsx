@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 const TITLE =
   "Sovereign Fund. A Theseus agent that owns capital and rebalances on its own";
 const DESCRIPTION =
-  "Live demo of a fully sovereign on-chain fund. The agent owns USDC + WETH, runs its own decision loop, and rebalances between the two assets based on market conditions and a written mandate. No human or contract calls it; it triggers itself, signs each decision, and posts the rationale on-chain.";
+  "Live demo of a fully sovereign agent-owned fund. The agent owns USDC and WETH, runs its own decision loop, and rebalances between the two assets based on market conditions and a written mandate. Nobody calls it; it triggers itself, signs each decision, and publishes the reasoning anyone can verify.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   keywords: [
     "autonomous trader",
-    "on-chain fund",
+    "agent-owned fund",
     "sovereign agent",
     "AI fund",
     "agent-owned capital",

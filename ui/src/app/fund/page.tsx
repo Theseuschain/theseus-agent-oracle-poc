@@ -153,7 +153,7 @@ export default function FundPage() {
               Sovereign Fund
             </h1>
             <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              An on-chain fund that owns its own capital (USDC + WETH), runs
+              A fund that owns its own capital (USDC + WETH), runs
               its own decision loop, and rebalances between the two assets
               based on market conditions and its written mandate. No human
               or contract calls it; the agent triggers itself. Each tick:
