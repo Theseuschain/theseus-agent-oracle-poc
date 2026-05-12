@@ -29,7 +29,8 @@ export type CallerKey =
   | "governance"
   | "adjudicator"
   | "aviation"
-  | "fund";
+  | "fund"
+  | "launchSniper";
 
 const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   aave: {
@@ -64,6 +65,10 @@ const CALLERS: Record<CallerKey, { addr: string; label: string }> = {
   fund: {
     addr: "0x09a7c5b3e1d9f7a5c3e1b9d7f5a3c1e9b7d5f3a1",
     label: "SovereignFund (self-scheduled tick)",
+  },
+  launchSniper: {
+    addr: "0xa6fbaadea4e7f58d812d989737d708b279e8bd21",
+    label: "LaunchSniperFund (self-scheduled tick, Base Sepolia paper)",
   },
 };
 

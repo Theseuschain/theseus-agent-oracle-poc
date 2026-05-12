@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/agent/launch-sniper/tick",
+      "schedule": "*/20 * * * *"
+    }
+  ]
+}
