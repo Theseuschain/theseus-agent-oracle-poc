@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Theseus demo agents",
     description:
-      "Browse eight autonomous agents — oracles, failsafes, reviewers, and sovereign funds — all running in a browser tab.",
+      "Browse eight autonomous agents: oracles, failsafes, reviewers, and sovereign funds. All running in a browser tab.",
     type: "website",
   },
 };
@@ -53,7 +53,7 @@ const AGENTS: AgentCard[] = [
     kind: "Mechanism gate",
     pitch: "Gates mint/redeem on a Terra-shaped algo stable.",
     description:
-      "USTD targets $1, LUND is the volatile token, mint and redeem at oracle price. Before every action the protocol asks the agent. It reads peg, redemption velocity, LUND supply growth, and backing coverage — and reasons whether running the mechanism right now stabilizes or amplifies the death spiral.",
+      "USTD targets $1, LUND is the volatile token, mint and redeem at oracle price. Before every action the protocol asks the agent. It reads peg, redemption velocity, LUND supply growth, and backing coverage, then decides whether running the mechanism right now stabilizes the system or amplifies the death spiral.",
     href: "/terra",
     poaUrl:
       "https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6",
@@ -66,7 +66,7 @@ const AGENTS: AgentCard[] = [
     kind: "Resolution oracle",
     pitch: "Resolves markets with live web search.",
     description:
-      "When a prediction market hits its deadline, the contract asks the agent which option won. The agent runs live web_search, fetches sources, and returns winning_option + confidence + evidence summary — or refuses if the event hasn't actually happened yet. Multi-option-aware.",
+      "When a prediction market hits its deadline, the contract asks the agent which option won. The agent runs live web_search, fetches sources, and returns winning_option, confidence, and an evidence summary. Refuses if the event hasn't actually happened yet. Multi-option markets supported.",
     href: "/adjudicate",
     poaUrl:
       "https://theseus.network/poa/5HsJ4xK2nL8pR3qY7mZ9wB1tF5dH6cV8aN2eW4xT6bP9sM3K",
@@ -92,7 +92,7 @@ const AGENTS: AgentCard[] = [
     kind: "Proposal reviewer",
     pitch: "Reads DAO proposals before voting opens.",
     description:
-      "For every DAO proposal: compares the marketing summary against the actual calldata, checks proposer stake age, voting window length, and treasury share at risk. Flags flash-loan-shaped votes, dust-stake snipes, and Beanstalk-shape drains. Advisory — voters see the verdict before they cast.",
+      "For every DAO proposal: compares the marketing summary against the actual calldata, checks proposer stake age, voting window length, and treasury share at risk. Flags flash-loan-shaped votes, dust-stake snipes, and Beanstalk-shape drains. Advisory only. Voters see the verdict before they cast.",
     href: "/governance",
     poaUrl:
       "https://theseus.network/poa/5FmN8vY6cP1qK4xR7zL3jB9wE5dV8aS2hT6gM3fX9pZ7nCk2",
@@ -118,7 +118,7 @@ const AGENTS: AgentCard[] = [
     kind: "Self-scheduled trader",
     pitch: "Autonomous on-chain fund. No human caller.",
     description:
-      "Owns its own USDC + WETH and runs a self-scheduled tick on its own clock. Reads market state, computes a target weight from its frozen mandate, and executes the rebalance against its own balances through Uniswap V3. The first sovereign-shape agent here — no contract calls it; it triggers itself.",
+      "Owns its own USDC and WETH and runs a self-scheduled tick on its own clock. Reads market state, computes a target weight from its frozen mandate, executes the rebalance against its own balances through Uniswap V3. The first sovereign-shape agent in this set. No contract calls it; it triggers itself.",
     href: "/fund",
     poaUrl:
       "https://theseus.network/poa/5LkY9d2vH6mR8nQ1bX3cP5tF7eK4aV2sZ8wM5oG1pJqC",
@@ -144,18 +144,18 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16">
-        <header className="mb-12 md:mb-16 max-w-3xl">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14">
+        <header className="mb-10 md:mb-12 max-w-3xl">
           <div className="eyebrow mb-3">Theseus / demo agents</div>
-          <h1 className="serif text-4xl md:text-5xl leading-[1.1] tracking-tight mb-5">
+          <h1 className="serif text-3xl md:text-4xl leading-[1.15] tracking-tight mb-4">
             Eight autonomous agents. Each one runs in a browser tab.
           </h1>
-          <p className="text-fg-dim text-[15px] leading-relaxed max-w-2xl">
-            Each agent reasons from raw inputs — not pre-baked rules — and posts a
-            signed decision blob to a real chain. Some are oracle replacements;
-            some are gates on a mechanism; some own their own capital. Every
-            agent publishes its verbatim system prompt on Proof of Agenthood, so
-            you can see exactly what the model sees on every cycle.
+          <p className="text-fg-dim text-[14px] leading-relaxed max-w-2xl">
+            Each agent reasons from raw inputs, not pre-baked rules, and posts a
+            signed decision to a real chain. Some are oracle replacements, some
+            are gates on a mechanism, some own their own capital. Every agent
+            publishes its verbatim system prompt on Proof of Agenthood, so you
+            can see exactly what the model sees on every cycle.
           </p>
         </header>
 

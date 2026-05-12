@@ -47,7 +47,7 @@ function classifyPair(
   const usdc1 = eqAddr(token1, USDC_MAINNET);
   const weth1 = eqAddr(token1, WETH_MAINNET);
 
-  // Skip stable/wrapped pairs (USDC/WETH itself) — not a token launch.
+  // Skip stable/wrapped pairs (USDC/WETH itself), not a token launch.
   if ((usdc0 || weth0) && (usdc1 || weth1)) return null;
 
   if (usdc0) return { token: token1, quote: "USDC", quoteAddress: USDC_MAINNET };

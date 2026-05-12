@@ -10,7 +10,7 @@
  * Difference from a real on-chain bridge: an LLM agent gates every release.
  * The bridge contract invokes the agent first; if the agent REFUSES, the
  * withdrawal reverts. A smart contract running this mechanism without an
- * agent is exactly what melted in Ronin, Wormhole, and Nomad — the
+ * agent is exactly what melted in Ronin, Wormhole, and Nomad. The
  * counterfactual badge on each row makes that visible.
  */
 
