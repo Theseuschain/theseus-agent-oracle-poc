@@ -7,6 +7,7 @@ import { AviationReviewButton } from "@/components/aviation/ReviewButton";
 import { AviationScenarioControls } from "@/components/aviation/AviationScenarioControls";
 import { AviationTimeline } from "@/components/aviation/AviationTimeline";
 import { AviationSafetyReviewerJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   AVIATION_PRESETS,
   AviationAgentVerdict,
@@ -187,6 +188,7 @@ export default function AviationPage() {
             <AviationTimeline entries={scenario.events} />
           </div>
         </div>
+        <CommitmentSurfaceFooter contract="aviationSafetyReviewer" />
       </main>
     </>
   );

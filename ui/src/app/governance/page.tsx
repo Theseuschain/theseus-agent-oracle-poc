@@ -7,6 +7,7 @@ import { ReviewButton } from "@/components/governance/ReviewButton";
 import { GovernanceScenarioControls } from "@/components/governance/GovernanceScenarioControls";
 import { GovernanceTimeline } from "@/components/governance/GovernanceTimeline";
 import { GovernanceReviewerJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   GOVERNANCE_PRESETS,
   GovernanceAgentVerdict,
@@ -185,6 +186,7 @@ export default function GovernancePage() {
             <GovernanceTimeline entries={scenario.events} />
           </div>
         </div>
+        <CommitmentSurfaceFooter contract="governanceReviewer" />
       </main>
     </>
   );

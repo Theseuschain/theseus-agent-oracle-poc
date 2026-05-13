@@ -7,6 +7,7 @@ import { FundTickButton } from "@/components/fund/TickButton";
 import { FundScenarioControls } from "@/components/fund/FundScenarioControls";
 import { FundTimeline } from "@/components/fund/FundTimeline";
 import { SovereignFundJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   FUND_PRESETS,
   FundAgentDecision,
@@ -189,6 +190,7 @@ export default function FundPage() {
             <FundTimeline entries={scenario.events} />
           </div>
         </div>
+        <CommitmentSurfaceFooter contract="sovereignFund" />
       </main>
     </>
   );

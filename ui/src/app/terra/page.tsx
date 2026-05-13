@@ -7,6 +7,7 @@ import { MintRedeemForm } from "@/components/terra/MintRedeemForm";
 import { TerraScenarioControls } from "@/components/terra/TerraScenarioControls";
 import { TerraTimeline } from "@/components/terra/TerraTimeline";
 import { TerraFailsafeJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   ActionKind,
   AgentVerdict,
@@ -171,6 +172,8 @@ export default function TerraPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <TerraTimeline entries={scenario.events} pending={scenario.pending} />
           </div>
+
+          <CommitmentSurfaceFooter contract="terraFailsafe" />
 
           <Footer />
         </div>

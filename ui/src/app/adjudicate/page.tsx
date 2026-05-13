@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { AdjudicatorJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import { ShareLinkButton } from "@/components/ShareLinkButton";
 import { useTypewriter } from "@/lib/use-typewriter";
 import {
@@ -243,6 +244,7 @@ export default function AdjudicatePage() {
 
           <Footer />
         </div>
+        <CommitmentSurfaceFooter contract="predictionMarketAdjudicator" />
       </main>
     </>
   );

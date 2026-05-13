@@ -7,6 +7,7 @@ import { WithdrawForm } from "@/components/bridge/WithdrawForm";
 import { BridgeScenarioControls } from "@/components/bridge/BridgeScenarioControls";
 import { BridgeTimeline } from "@/components/bridge/BridgeTimeline";
 import { BridgeGuardianJsonLd } from "@/components/JsonLd";
+import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   BridgeAgentVerdict,
   BridgeScenarioState,
@@ -190,6 +191,7 @@ export default function BridgePage() {
             <BridgeTimeline entries={scenario.events} />
           </div>
         </div>
+        <CommitmentSurfaceFooter contract="bridgeGuardian" />
       </main>
     </>
   );
