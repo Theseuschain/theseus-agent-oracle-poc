@@ -14,6 +14,8 @@ import {
   PRESETS,
   TerraScenarioState,
   applyAgentVerdict,
+  applyTerraOnChainCommit,
+  applyTerraCommitError,
   applyPendingAction,
   applyPreset,
   initialTerraScenario,
@@ -105,6 +107,23 @@ export default function TerraPage() {
                   setScenario((s) => setTerraPendingReasoning(s, parsed.text));
                 } else if (parsed.type === "final" && parsed.output) {
                   finalVerdict = parsed.output as AgentVerdict;
+                  setScenario((s) => applyAgentVerdict(s, finalVerdict!));
+                } else if (parsed.type === "committed") {
+                  setScenario((s) =>
+                    applyTerraOnChainCommit(s, {
+                      txHash: parsed.txHash,
+                      txUrl: parsed.txUrl,
+                      reasonHash: parsed.reasonHash,
+                      blobUrl: parsed.blobUrl ?? null,
+                    }),
+                  );
+                } else if (parsed.type === "commit_error") {
+                  setScenario((s) =>
+                    applyTerraCommitError(
+                      s,
+                      parsed.error ?? "commit failed",
+                    ),
+                  );
                 } else if (parsed.type === "error") {
                   throw new Error(parsed.error ?? "stream error");
                 }
@@ -116,7 +135,6 @@ export default function TerraPage() {
         }
 
         if (!finalVerdict) throw new Error("stream ended without final verdict");
-        setScenario((s) => applyAgentVerdict(s, finalVerdict!));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.warn("[terra] decide failed; refusing as safe default", msg);
@@ -173,7 +191,7 @@ export default function TerraPage() {
             <TerraTimeline entries={scenario.events} pending={scenario.pending} />
           </div>
 
-          <CommitmentSurfaceFooter contract="terraFailsafe" />
+          <CommitmentSurfaceFooter contract="terraFailsafe" live />
 
           <Footer />
         </div>

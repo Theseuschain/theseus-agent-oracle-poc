@@ -35,6 +35,13 @@ export interface AgentVerdict {
   rawResponse?: string;
 }
 
+export interface OnChainCommit {
+  txHash: string;
+  txUrl: string;
+  reasonHash: string;
+  blobUrl: string | null;
+}
+
 export interface TimelineEntry {
   block: number;
   action: ActionKind;
@@ -47,6 +54,12 @@ export interface TimelineEntry {
    *  verdict lands. Renderers display this in place of the verdict's
    *  reasoning while the agent is still thinking. */
   streamingReasoning?: string;
+  /** Populated once the API has posted the verdict to TerraFailsafe on
+   *  Base Sepolia. Arrives as a `committed` SSE event a few seconds after
+   *  the verdict itself. */
+  commit?: OnChainCommit;
+  /** Set when the commit attempt failed; verdict still stands in the UI. */
+  commitError?: string;
   vaultSnapshot: VaultState;
   scenarioLabel?: string;
 }
@@ -246,5 +259,32 @@ export function setTerraPendingReasoning(
       { ...head, streamingReasoning: reasoning },
       ...state.events.slice(1),
     ],
+  };
+}
+
+/** Attach the on-chain commit info to the most recent (head) verdict entry. */
+export function applyTerraOnChainCommit(
+  state: TerraScenarioState,
+  commit: OnChainCommit,
+): TerraScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commit }, ...state.events.slice(1)],
+  };
+}
+
+/** Record a commit failure on the head entry without disturbing the
+ *  verdict itself. */
+export function applyTerraCommitError(
+  state: TerraScenarioState,
+  commitError: string,
+): TerraScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commitError }, ...state.events.slice(1)],
   };
 }
