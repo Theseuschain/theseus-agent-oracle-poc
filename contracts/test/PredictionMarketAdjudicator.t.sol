@@ -105,4 +105,16 @@ contract PredictionMarketAdjudicatorTest is Test {
         PredictionMarketAdjudicator.Verdict memory v = adj.inspect(1006);
         assertEq(uint8(v.decision), uint8(PredictionMarketAdjudicator.Decision.REFUSED));
     }
+
+    function test_ResolveRejectsZeroReasonHash() public {
+        vm.prank(agent);
+        vm.expectRevert(PredictionMarketAdjudicator.MissingReasonHash.selector);
+        adj.resolve(1007, 2, 0, 90, bytes32(0));
+    }
+
+    function test_RefuseRejectsZeroReasonHash() public {
+        vm.prank(agent);
+        vm.expectRevert(PredictionMarketAdjudicator.MissingReasonHash.selector);
+        adj.refuse(1008, bytes32(0));
+    }
 }

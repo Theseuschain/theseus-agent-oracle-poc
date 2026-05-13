@@ -57,6 +57,7 @@ contract PredictionMarketAdjudicator {
     error AlreadyResolved(uint256 marketId);
     error InvalidWinningOption(uint8 winningOption, uint8 numOptions);
     error InvalidConfidence(uint8 confidencePct);
+    error MissingReasonHash();
     error MarketRefused(uint256 marketId, bytes32 reasonHash);
     error MarketUnresolved(uint256 marketId);
 
@@ -86,6 +87,7 @@ contract PredictionMarketAdjudicator {
         if (verdicts[marketId].decision == Decision.RESOLVED) revert AlreadyResolved(marketId);
         if (winningOption >= numOptions) revert InvalidWinningOption(winningOption, numOptions);
         if (confidencePct > 100) revert InvalidConfidence(confidencePct);
+        if (reasonHash == bytes32(0)) revert MissingReasonHash();
 
         bool firstTouch = verdicts[marketId].decision == Decision.UNINITIALIZED;
         verdicts[marketId] = Verdict({
@@ -106,6 +108,7 @@ contract PredictionMarketAdjudicator {
     /// @param reasonHash keccak256 of the agent's reasoning blob.
     function refuse(uint256 marketId, bytes32 reasonHash) external onlyAgent {
         if (verdicts[marketId].decision == Decision.RESOLVED) revert AlreadyResolved(marketId);
+        if (reasonHash == bytes32(0)) revert MissingReasonHash();
         bool firstTouch = verdicts[marketId].decision == Decision.UNINITIALIZED;
         verdicts[marketId] = Verdict({
             decision: Decision.REFUSED,
