@@ -6,6 +6,7 @@ import { PortfolioPanel } from "@/components/fund/PortfolioPanel";
 import { FundTickButton } from "@/components/fund/TickButton";
 import { FundScenarioControls } from "@/components/fund/FundScenarioControls";
 import { FundTimeline } from "@/components/fund/FundTimeline";
+import { SovereignFundLivePanel } from "@/components/fund/SovereignFundLivePanel";
 import { SovereignFundJsonLd } from "@/components/JsonLd";
 import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
@@ -189,6 +190,8 @@ export default function FundPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FundTimeline entries={scenario.events} />
           </div>
+
+          <SovereignFundLivePanel />
         </div>
         <CommitmentSurfaceFooter contract="sovereignFund" />
       </main>
