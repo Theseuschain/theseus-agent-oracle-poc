@@ -237,39 +237,18 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="mt-16 pt-8 border-t border-border text-fg-dim text-xs leading-relaxed">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <div className="eyebrow mb-2">How it works</div>
-          The protocol calls the failsafe agent before every mint/redeem.
-          The agent reads five vault signals (peg deviation, redemption pressure,
-          LUND supply growth, LUND price, reserve coverage) and either ALLOWS
-          the action or REFUSES it. Refused actions revert; the user keeps
-          their tokens; the system stops moving toward a death spiral.
-        </div>
-        <div>
-          <div className="eyebrow mb-2">What to try</div>
-          Step through the five presets (Healthy, Slight depeg, Peg cracking,
-          Bank run, Death spiral) and try the same MINT/REDEEM action at
-          each. The agent should ALLOW most actions during Healthy and start
-          refusing as the vault deteriorates. The counterfactual badge shows
-          what a no-failsafe contract would have done in the same moment.
-        </div>
-        <div>
-          <div className="eyebrow mb-2">Source</div>
-          <a
-            href="https://github.com/Theseuschain/theseus-agent-oracle-poc"
-            className="text-coral hover:underline mono"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Theseuschain/theseus-agent-oracle-poc
-          </a>
-          <div className="mt-2 mono text-[11px]">
-            Vault state is simulation. Agent reasoning is real (deepseek-chat).
-          </div>
-        </div>
-      </div>
+    <footer className="mt-12 pt-6 border-t border-border flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 text-[11px] mono text-fg-mute">
+      <span>
+        Vault state is simulation. Agent reasoning is real (deepseek-chat).
+      </span>
+      <a
+        href="https://github.com/Theseuschain/theseus-agent-oracle-poc"
+        className="uppercase tracking-wider text-fg-dim hover:text-fg transition"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        source ↗
+      </a>
     </footer>
   );
 }
