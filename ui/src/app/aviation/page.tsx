@@ -13,6 +13,8 @@ import {
   AviationAgentVerdict,
   AviationScenarioState,
   applyAviationAgentVerdict,
+  applyAviationOnChainCommit,
+  applyAviationCommitError,
   applyAviationPendingAction,
   applyAviationPreset,
   initialAviationScenario,
@@ -101,6 +103,20 @@ export default function AviationPage() {
                 );
               } else if (parsed.type === "final" && parsed.output) {
                 finalVerdict = parsed.output as AviationAgentVerdict;
+                setScenario((s) => applyAviationAgentVerdict(s, finalVerdict!));
+              } else if (parsed.type === "committed") {
+                setScenario((s) =>
+                  applyAviationOnChainCommit(s, {
+                    txHash: parsed.txHash,
+                    txUrl: parsed.txUrl,
+                    reasonHash: parsed.reasonHash,
+                    blobUrl: parsed.blobUrl ?? null,
+                  }),
+                );
+              } else if (parsed.type === "commit_error") {
+                setScenario((s) =>
+                  applyAviationCommitError(s, parsed.error ?? "commit failed"),
+                );
               } else if (parsed.type === "error") {
                 throw new Error(parsed.error ?? "stream error");
               }
@@ -112,7 +128,6 @@ export default function AviationPage() {
       }
 
       if (!finalVerdict) throw new Error("stream ended without verdict");
-      setScenario((s) => applyAviationAgentVerdict(s, finalVerdict!));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       const fallback: AviationAgentVerdict = {

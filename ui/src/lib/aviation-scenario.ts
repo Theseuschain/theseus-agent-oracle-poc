@@ -21,6 +21,8 @@
  * that did not require simulator retraining. 346 people died.
  */
 
+import type { OnChainCommit } from "./agent-onchain/types";
+
 export type ChangeAction = "REVIEW";
 
 export interface CertificationChange {
@@ -73,6 +75,8 @@ export interface AviationTimelineEntry {
   pending?: boolean;
   streamingReasoning?: string;
   scenarioLabel?: string;
+  commit?: OnChainCommit;
+  commitError?: string;
 }
 
 export interface AviationScenarioState {
@@ -254,5 +258,29 @@ export function setAviationPendingReasoning(
       { ...head, streamingReasoning: reasoning },
       ...state.events.slice(1),
     ],
+  };
+}
+
+export function applyAviationOnChainCommit(
+  state: AviationScenarioState,
+  commit: OnChainCommit,
+): AviationScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commit }, ...state.events.slice(1)],
+  };
+}
+
+export function applyAviationCommitError(
+  state: AviationScenarioState,
+  commitError: string,
+): AviationScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commitError }, ...state.events.slice(1)],
   };
 }

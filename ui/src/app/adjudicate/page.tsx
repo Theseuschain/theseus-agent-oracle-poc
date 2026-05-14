@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { AdjudicatorJsonLd } from "@/components/JsonLd";
 import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
+import { CommitBadge } from "@/components/CommitBadge";
+import type { OnChainCommit } from "@/lib/agent-onchain/types";
 import { ShareLinkButton } from "@/components/ShareLinkButton";
 import { useTypewriter } from "@/lib/use-typewriter";
 import {
@@ -58,7 +60,12 @@ type FinalOutput = {
 type RunState =
   | { kind: "idle" }
   | { kind: "streaming"; reasoning: string }
-  | { kind: "done"; output: FinalOutput }
+  | {
+      kind: "done";
+      output: FinalOutput;
+      commit?: OnChainCommit;
+      commitError?: string;
+    }
   | { kind: "error"; message: string };
 
 const POA_AGENT_ID = "5HsJ4xK2nL8pR3qY7mZ9wB1tF5dH6cV8aN2eW4xT6bP9sM3K";
@@ -152,6 +159,27 @@ export default function AdjudicatePage() {
                 setRun({ kind: "streaming", reasoning });
               } else if (parsed.type === "final" && parsed.output) {
                 final = parsed.output as FinalOutput;
+                setRun({ kind: "done", output: final });
+              } else if (parsed.type === "committed") {
+                setRun((prev) =>
+                  prev.kind === "done"
+                    ? {
+                        ...prev,
+                        commit: {
+                          txHash: parsed.txHash,
+                          txUrl: parsed.txUrl,
+                          reasonHash: parsed.reasonHash,
+                          blobUrl: parsed.blobUrl ?? null,
+                        },
+                      }
+                    : prev,
+                );
+              } else if (parsed.type === "commit_error") {
+                setRun((prev) =>
+                  prev.kind === "done"
+                    ? { ...prev, commitError: parsed.error ?? "commit failed" }
+                    : prev,
+                );
               } else if (parsed.type === "error") {
                 throw new Error(parsed.error ?? "stream error");
               }
@@ -163,7 +191,6 @@ export default function AdjudicatePage() {
       }
 
       if (!final) throw new Error("stream ended without verdict");
-      setRun({ kind: "done", output: final });
     } catch (e: unknown) {
       if (ctrl.signal.aborted) return;
       const msg = e instanceof Error ? e.message : String(e);
@@ -537,6 +564,14 @@ function VerdictPanel({
             ))}
           </ul>
         </div>
+      )}
+
+      {isDone && (
+        <CommitBadge
+          commit={run.commit}
+          error={run.commitError}
+          className="mt-4"
+        />
       )}
 
       {isDone && market.actualResolution && (

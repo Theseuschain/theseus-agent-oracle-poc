@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CommitBadge } from "@/components/CommitBadge";
 import { CircleCheck, CircleX, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { TimelineEntry } from "@/lib/terra-scenario";
 import { terraCounterfactual } from "@/lib/counterfactual";
@@ -203,34 +204,7 @@ function Row({ entry, defaultOpen }: { entry: TimelineEntry; defaultOpen: boolea
               {entry.verdict.reasoning}
             </div>
           )}
-          {entry.commit && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] mono">
-              <span className="text-fg-mute uppercase tracking-wider">Signed on Base Sepolia</span>
-              <a
-                href={entry.commit.txUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-coral hover:underline underline-offset-[3px] break-all"
-              >
-                {entry.commit.txHash.slice(0, 10)}…{entry.commit.txHash.slice(-6)} ↗
-              </a>
-              {entry.commit.blobUrl && (
-                <a
-                  href={entry.commit.blobUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-fg-dim hover:text-fg underline-offset-[3px] hover:underline"
-                >
-                  reasoning blob ↗
-                </a>
-              )}
-            </div>
-          )}
-          {entry.commitError && (
-            <div className="mt-2 text-[10.5px] mono text-amber">
-              On-chain commit failed: {entry.commitError}
-            </div>
-          )}
+          <CommitBadge commit={entry.commit} error={entry.commitError} />
           {inspectOpen && entry.verdict && <Inspect entry={entry} />}
         </div>
       </div>

@@ -13,6 +13,8 @@ import {
   GovernanceAgentVerdict,
   GovernanceScenarioState,
   applyGovernanceAgentVerdict,
+  applyGovernanceOnChainCommit,
+  applyGovernanceCommitError,
   applyGovernancePendingAction,
   applyGovernancePreset,
   initialGovernanceScenario,
@@ -101,6 +103,20 @@ export default function GovernancePage() {
                 );
               } else if (parsed.type === "final" && parsed.output) {
                 finalVerdict = parsed.output as GovernanceAgentVerdict;
+                setScenario((s) => applyGovernanceAgentVerdict(s, finalVerdict!));
+              } else if (parsed.type === "committed") {
+                setScenario((s) =>
+                  applyGovernanceOnChainCommit(s, {
+                    txHash: parsed.txHash,
+                    txUrl: parsed.txUrl,
+                    reasonHash: parsed.reasonHash,
+                    blobUrl: parsed.blobUrl ?? null,
+                  }),
+                );
+              } else if (parsed.type === "commit_error") {
+                setScenario((s) =>
+                  applyGovernanceCommitError(s, parsed.error ?? "commit failed"),
+                );
               } else if (parsed.type === "error") {
                 throw new Error(parsed.error ?? "stream error");
               }
@@ -112,7 +128,6 @@ export default function GovernancePage() {
       }
 
       if (!finalVerdict) throw new Error("stream ended without verdict");
-      setScenario((s) => applyGovernanceAgentVerdict(s, finalVerdict!));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       const fallback: GovernanceAgentVerdict = {

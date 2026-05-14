@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CommitBadge } from "@/components/CommitBadge";
 import {
   CircleCheck,
   CircleX,
@@ -229,6 +230,7 @@ function Row({ entry }: { entry: AviationTimelineEntry }) {
               {entry.verdict.reasoning}
             </div>
           )}
+          <CommitBadge commit={entry.commit} error={entry.commitError} />
           {inspectOpen && entry.verdict?.prompt && (
             <div className="mt-2 grid grid-cols-1 gap-2">
               <details className="p-3 rounded-[8px] bg-surface-2 border border-border">

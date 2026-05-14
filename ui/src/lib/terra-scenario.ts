@@ -35,12 +35,9 @@ export interface AgentVerdict {
   rawResponse?: string;
 }
 
-export interface OnChainCommit {
-  txHash: string;
-  txUrl: string;
-  reasonHash: string;
-  blobUrl: string | null;
-}
+import type { OnChainCommit } from "./agent-onchain/types";
+
+export type { OnChainCommit };
 
 export interface TimelineEntry {
   block: number;

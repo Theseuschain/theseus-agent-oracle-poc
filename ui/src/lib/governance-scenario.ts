@@ -14,6 +14,8 @@
  * at the contract level.
  */
 
+import type { OnChainCommit } from "./agent-onchain/types";
+
 export type ProposalAction = "REVIEW";
 
 export interface ProposalState {
@@ -61,6 +63,8 @@ export interface GovernanceTimelineEntry {
   pending?: boolean;
   streamingReasoning?: string;
   scenarioLabel?: string;
+  commit?: OnChainCommit;
+  commitError?: string;
 }
 
 export interface GovernanceScenarioState {
@@ -246,5 +250,29 @@ export function setGovernancePendingReasoning(
       { ...head, streamingReasoning: reasoning },
       ...state.events.slice(1),
     ],
+  };
+}
+
+export function applyGovernanceOnChainCommit(
+  state: GovernanceScenarioState,
+  commit: OnChainCommit,
+): GovernanceScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commit }, ...state.events.slice(1)],
+  };
+}
+
+export function applyGovernanceCommitError(
+  state: GovernanceScenarioState,
+  commitError: string,
+): GovernanceScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commitError }, ...state.events.slice(1)],
   };
 }

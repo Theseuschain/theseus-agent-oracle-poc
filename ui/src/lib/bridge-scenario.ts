@@ -53,6 +53,8 @@ export interface BridgeAgentVerdict {
   rawResponse?: string;
 }
 
+import type { OnChainCommit } from "./agent-onchain/types";
+
 export interface BridgeTimelineEntry {
   block: number;
   action: BridgeActionKind;
@@ -60,6 +62,8 @@ export interface BridgeTimelineEntry {
   verdict?: BridgeAgentVerdict;
   pending?: boolean;
   streamingReasoning?: string;
+  commit?: OnChainCommit;
+  commitError?: string;
   stateSnapshot: BridgeState;
   scenarioLabel?: string;
 }
@@ -253,5 +257,29 @@ export function setBridgePendingReasoning(
       { ...head, streamingReasoning: reasoning },
       ...state.events.slice(1),
     ],
+  };
+}
+
+export function applyBridgeOnChainCommit(
+  state: BridgeScenarioState,
+  commit: OnChainCommit,
+): BridgeScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commit }, ...state.events.slice(1)],
+  };
+}
+
+export function applyBridgeCommitError(
+  state: BridgeScenarioState,
+  commitError: string,
+): BridgeScenarioState {
+  if (state.events.length === 0) return state;
+  const head = state.events[0];
+  return {
+    ...state,
+    events: [{ ...head, commitError }, ...state.events.slice(1)],
   };
 }

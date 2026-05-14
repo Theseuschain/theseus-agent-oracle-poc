@@ -13,6 +13,8 @@ import {
   BridgeScenarioState,
   BRIDGE_PRESETS,
   applyBridgeAgentVerdict,
+  applyBridgeOnChainCommit,
+  applyBridgeCommitError,
   applyBridgePendingAction,
   applyBridgePreset,
   initialBridgeScenario,
@@ -105,6 +107,20 @@ export default function BridgePage() {
                   );
                 } else if (parsed.type === "final" && parsed.output) {
                   finalVerdict = parsed.output as BridgeAgentVerdict;
+                  setScenario((s) => applyBridgeAgentVerdict(s, finalVerdict!));
+                } else if (parsed.type === "committed") {
+                  setScenario((s) =>
+                    applyBridgeOnChainCommit(s, {
+                      txHash: parsed.txHash,
+                      txUrl: parsed.txUrl,
+                      reasonHash: parsed.reasonHash,
+                      blobUrl: parsed.blobUrl ?? null,
+                    }),
+                  );
+                } else if (parsed.type === "commit_error") {
+                  setScenario((s) =>
+                    applyBridgeCommitError(s, parsed.error ?? "commit failed"),
+                  );
                 } else if (parsed.type === "error") {
                   throw new Error(parsed.error ?? "stream error");
                 }
@@ -116,7 +132,6 @@ export default function BridgePage() {
         }
 
         if (!finalVerdict) throw new Error("stream ended without verdict");
-        setScenario((s) => applyBridgeAgentVerdict(s, finalVerdict!));
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         const fallback: BridgeAgentVerdict = {
