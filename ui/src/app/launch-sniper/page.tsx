@@ -70,21 +70,9 @@ export default async function LaunchSniperPage() {
           <h1 className="serif text-3xl md:text-4xl leading-[1.1] tracking-tight mb-4">
             {tickHeadline(fund)}
           </h1>
-          <p className="text-fg-dim text-[14.5px] leading-relaxed max-w-3xl">
-            The agent watches Base mainnet for fresh Uniswap V3 pools paired with
-            USDC or WETH, runs each candidate through Claude Haiku 4.5 with the
-            checklist published on its{" "}
-            <a
-              href={POA_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-coral hover:underline underline-offset-[3px]"
-            >
-              Proof of Agenthood profile
-            </a>
-            , and commits a PASS or BUY decision to the LaunchSniperFund.
-            Real market signal, paper money. Click any tick to read the full
-            dossier and reasoning blob.
+          <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+            Real market signal, paper money. Click any tick for the full
+            dossier.
           </p>
         </header>
 

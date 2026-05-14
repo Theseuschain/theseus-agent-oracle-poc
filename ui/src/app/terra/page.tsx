@@ -217,21 +217,8 @@ function Header() {
           Agent&apos;s PoA profile ↗
         </a>
       </div>
-      <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-        An algorithmic stablecoin (USTD/LUND) with one architectural change
-        from Terra: an agent gates every mint and redeem. The protocol calls
-        the agent <em>before</em> executing; the agent allows or refuses based
-        on the vault&apos;s current health. Every verdict carries the full
-        context the model saw, signed and committed under{" "}
-        <a
-          href="https://theseus.network/poa"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-coral hover:underline"
-        >
-          Proof of Agenthood
-        </a>
-        .
+      <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+        Load a vault state and try a mint or redeem.
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>

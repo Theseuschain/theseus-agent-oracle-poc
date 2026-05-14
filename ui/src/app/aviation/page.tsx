@@ -151,15 +151,8 @@ export default function AviationPage() {
             <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
               Aviation Safety Reviewer
             </h1>
-            <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              An independent type-certification reviewer for proposed
-              aircraft changes. The agent reads the change, the technical
-              summary, and the safety-relevant signals, then posts an
-              advisory verdict before the certifying authority issues its
-              airworthiness directive. The role exists because under
-              delegation programs (FAA ODA), most of the analysis is done
-              by the manufacturer&rsquo;s own engineers. Presets include
-              the structural shape of the 737 MAX MCAS certification.
+            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+              Presets include the 737 MAX MCAS shape.
             </p>
           </header>
 

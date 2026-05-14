@@ -157,12 +157,8 @@ export default function BridgePage() {
             <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
               Bridge Guardian
             </h1>
-            <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              A cross-chain bridge whose destination-side releases are gated
-              by a Theseus agent. Pick a source-chain state, click{" "}
-              <span className="text-fg">Release</span>, and watch the guardian
-              reason about whether the withdrawal is safe. Presets cover the
-              Ronin, Wormhole, and Nomad attack shapes.
+            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+              Presets cover the Ronin, Wormhole, and Nomad attack shapes.
             </p>
           </header>
 

@@ -267,30 +267,8 @@ function Header() {
           Agent&apos;s PoA profile ↗
         </a>
       </div>
-      <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-        This is the <code className="font-mono text-fg">resolver_oracle</code>{" "}
-        agent from{" "}
-        <a
-          href={SOURCE_REPO}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-coral hover:underline"
-        >
-          Theseuschain/the-prediction-market
-        </a>
-        . On every run the agent reads the question and criteria, then
-        calls <code className="font-mono text-fg">web_search</code> to
-        gather evidence fresh; it sees no curated evidence pack. Each
-        verdict is signed under{" "}
-        <a
-          href="https://theseus.network/poa"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-coral hover:underline"
-        >
-          Proof of Agenthood
-        </a>
-        .
+      <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+        Pick a market and let the agent search the web for evidence.
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>

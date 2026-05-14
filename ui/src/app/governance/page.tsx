@@ -151,13 +151,9 @@ export default function GovernancePage() {
             <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
               Governance Reviewer
             </h1>
-            <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              A DAO proposal flow with a Theseus agent posting an advisory
-              verdict before each vote opens. The agent reads the proposal,
-              the calldata summary, and the treasury and voting context;
-              it returns APPROVE, CAUTION, or REJECT with reasoning. Catches
-              governance-shaped exploits a contract has no way to reason
-              about, like the Beanstalk attack.
+            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+              Presets cover the Beanstalk flash-loan attack and the
+              dust-stake snipe.
             </p>
           </header>
 

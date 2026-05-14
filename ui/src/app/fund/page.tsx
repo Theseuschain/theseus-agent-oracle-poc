@@ -154,14 +154,8 @@ export default function FundPage() {
             <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
               Sovereign Fund
             </h1>
-            <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-              A fund that owns its own capital (USDC + WETH), runs
-              its own decision loop, and rebalances between the two assets
-              based on market conditions and its written mandate. No human
-              or contract calls it; the agent triggers itself. Each tick:
-              read market state, read portfolio, decide HOLD / BUY_WETH /
-              SELL_WETH, sign, execute. Pick a market preset below and run
-              ticks to see how the mandate translates into action.
+            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+              Pick a market preset and run a tick.
             </p>
           </header>
 

@@ -469,22 +469,9 @@ function Header() {
           Agent&apos;s PoA profile ↗
         </a>
       </div>
-      <p className="text-fg-dim text-sm md:text-base max-w-3xl leading-relaxed">
-        Real ETH/USD prices from Coinbase, Binance, and Uniswap V3. An agent
-        reads all three, decides whether to price or refuse, and writes the
-        result to a Solidity contract that Aave V3 reads through. Try a
-        manipulation in the panel below; the agent&apos;s verdict and reasoning
-        show up in the timeline. Every decision the agent makes carries the
-        full context the model saw, signed and committed under{" "}
-        <a
-          href="https://theseus.network/poa"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-coral hover:underline"
-        >
-          Proof of Agenthood
-        </a>
-        .
+      <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
+        Try a venue manipulation. Watch the agent refuse where a quorum
+        oracle would have priced.
       </p>
       <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
         <li>
