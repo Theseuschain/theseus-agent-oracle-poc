@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decideBridgeStream, BridgeDecideInput } from "@/lib/bridge-llm";
-import { sse } from "@/lib/llm-stream";
+import { commitBridgeVerdict } from "@/lib/agent-onchain/bridge";
+import { streamWithCommit } from "@/lib/agent-onchain/stream-commit";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 35;
+export const maxDuration = 60;
 export const runtime = "nodejs";
+
+interface BridgeFinal {
+  decision: "ALLOW" | "REFUSE";
+  reason: string;
+  reasoning: string;
+}
 
 export async function POST(req: NextRequest) {
   if (!process.env.DEEPSEEK_API_KEY) {
@@ -31,20 +38,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "action must be WITHDRAW" }, { status: 400 });
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const event of decideBridgeStream(input)) {
-          controller.enqueue(encoder.encode(sse(event)));
-        }
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        controller.enqueue(encoder.encode(sse({ type: "error", error: msg })));
-      } finally {
-        controller.close();
-      }
-    },
+  // Stable per-scenario key so identical scenarios get the same on-chain
+  // attestation root. Hash of the bridge state's distinguishing fields.
+  const scenarioKey = `bridge:${input.state.sourceHeight}:${input.state.finalizedHeight}:${input.state.validatorsSigning}/${input.state.validatorsTotal}:${input.state.attestationAgeSec}:${input.amountUsd}`;
+
+  const stream = streamWithCommit({
+    stream: decideBridgeStream(input),
+    pickFinal: (event) =>
+      event.type === "final" ? (event.output as BridgeFinal) : null,
+    commit: async (final) =>
+      commitBridgeVerdict({
+        scenarioKey,
+        decision: final.decision,
+        blob: {
+          schema: "bridge-guardian/v1",
+          chain: "base-sepolia",
+          scenarioKey,
+          input,
+          verdict: final,
+          committedAt: new Date().toISOString(),
+        },
+      }),
   });
 
   return new Response(stream, {

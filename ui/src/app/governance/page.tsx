@@ -186,7 +186,7 @@ export default function GovernancePage() {
             <GovernanceTimeline entries={scenario.events} />
           </div>
         </div>
-        <CommitmentSurfaceFooter contract="governanceReviewer" />
+        <CommitmentSurfaceFooter contract="governanceReviewer" live />
       </main>
     </>
   );

@@ -3,11 +3,18 @@ import {
   GovernanceReviewInput,
   reviewGovernanceStream,
 } from "@/lib/governance-llm";
-import { sse } from "@/lib/llm-stream";
+import { commitGovernanceVerdict } from "@/lib/agent-onchain/governance";
+import { streamWithCommit } from "@/lib/agent-onchain/stream-commit";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 35;
+export const maxDuration = 60;
 export const runtime = "nodejs";
+
+interface GovernanceFinal {
+  decision: "APPROVE" | "CAUTION" | "REJECT";
+  reason: string;
+  reasoning: string;
+}
 
 export async function POST(req: NextRequest) {
   if (!process.env.DEEPSEEK_API_KEY) {
@@ -25,26 +32,28 @@ export async function POST(req: NextRequest) {
   }
 
   if (!input.proposal || typeof input.proposal.proposalId !== "number") {
-    return NextResponse.json(
-      { error: "missing proposal" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "missing proposal" }, { status: 400 });
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const event of reviewGovernanceStream(input)) {
-          controller.enqueue(encoder.encode(sse(event)));
-        }
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        controller.enqueue(encoder.encode(sse({ type: "error", error: msg })));
-      } finally {
-        controller.close();
-      }
-    },
+  const proposalId = input.proposal.proposalId;
+
+  const stream = streamWithCommit({
+    stream: reviewGovernanceStream(input),
+    pickFinal: (event) =>
+      event.type === "final" ? (event.output as GovernanceFinal) : null,
+    commit: async (final) =>
+      commitGovernanceVerdict({
+        proposalId,
+        decision: final.decision,
+        blob: {
+          schema: "governance-reviewer/v1",
+          chain: "base-sepolia",
+          proposalId,
+          input,
+          verdict: final,
+          committedAt: new Date().toISOString(),
+        },
+      }),
   });
 
   return new Response(stream, {

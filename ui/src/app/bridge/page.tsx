@@ -191,7 +191,7 @@ export default function BridgePage() {
             <BridgeTimeline entries={scenario.events} />
           </div>
         </div>
-        <CommitmentSurfaceFooter contract="bridgeGuardian" />
+        <CommitmentSurfaceFooter contract="bridgeGuardian" live />
       </main>
     </>
   );

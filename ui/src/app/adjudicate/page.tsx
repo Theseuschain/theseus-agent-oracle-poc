@@ -244,7 +244,7 @@ export default function AdjudicatePage() {
 
           <Footer />
         </div>
-        <CommitmentSurfaceFooter contract="predictionMarketAdjudicator" />
+        <CommitmentSurfaceFooter contract="predictionMarketAdjudicator" live />
       </main>
     </>
   );

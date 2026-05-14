@@ -188,7 +188,7 @@ export default function AviationPage() {
             <AviationTimeline entries={scenario.events} />
           </div>
         </div>
-        <CommitmentSurfaceFooter contract="aviationSafetyReviewer" />
+        <CommitmentSurfaceFooter contract="aviationSafetyReviewer" live />
       </main>
     </>
   );

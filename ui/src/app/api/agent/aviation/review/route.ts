@@ -3,11 +3,18 @@ import {
   AviationReviewInput,
   reviewAviationStream,
 } from "@/lib/aviation-llm";
-import { sse } from "@/lib/llm-stream";
+import { commitAviationVerdict } from "@/lib/agent-onchain/aviation";
+import { streamWithCommit } from "@/lib/agent-onchain/stream-commit";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 35;
+export const maxDuration = 60;
 export const runtime = "nodejs";
+
+interface AviationFinal {
+  decision: "APPROVE" | "CAUTION" | "REJECT";
+  reason: string;
+  reasoning: string;
+}
 
 export async function POST(req: NextRequest) {
   if (!process.env.DEEPSEEK_API_KEY) {
@@ -28,20 +35,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing change" }, { status: 400 });
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const event of reviewAviationStream(input)) {
-          controller.enqueue(encoder.encode(sse(event)));
-        }
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        controller.enqueue(encoder.encode(sse({ type: "error", error: msg })));
-      } finally {
-        controller.close();
-      }
-    },
+  const changeId = input.change.changeId;
+
+  const stream = streamWithCommit({
+    stream: reviewAviationStream(input),
+    pickFinal: (event) =>
+      event.type === "final" ? (event.output as AviationFinal) : null,
+    commit: async (final) =>
+      commitAviationVerdict({
+        changeId,
+        decision: final.decision,
+        blob: {
+          schema: "aviation-safety-reviewer/v1",
+          chain: "base-sepolia",
+          changeId,
+          input,
+          verdict: final,
+          committedAt: new Date().toISOString(),
+        },
+      }),
   });
 
   return new Response(stream, {
