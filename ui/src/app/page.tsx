@@ -169,19 +169,12 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        <header className="mb-10 md:mb-12 max-w-3xl">
-          <div className="eyebrow mb-3">Theseus / demo agents</div>
-          <h1 className="serif text-3xl md:text-4xl leading-[1.15] tracking-tight mb-4">
-            Eight autonomous agents. Each one runs in a browser tab.
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
+        <header className="mb-8 md:mb-10">
+          <div className="eyebrow mb-2">Theseus / demo agents</div>
+          <h1 className="serif text-3xl md:text-4xl leading-[1.15] tracking-tight">
+            Click an agent.
           </h1>
-          <p className="text-fg-dim text-[14px] leading-relaxed max-w-2xl">
-            Each agent reasons from raw inputs, not pre-baked rules, and posts a
-            signed decision to a real chain. Some are oracle replacements, some
-            are gates on a mechanism, some own their own capital. Every agent
-            publishes its verbatim system prompt on Proof of Agenthood, so you
-            can see exactly what the model sees on every cycle.
-          </p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
@@ -190,19 +183,14 @@ export default function Home() {
           ))}
         </div>
 
-        <footer className="mt-16 pt-8 border-t border-border flex flex-wrap items-baseline justify-between gap-4">
-          <p className="text-fg-dim text-[13px] leading-relaxed max-w-xl">
-            These are demos. Some run on a real testnet (Base Sepolia); some run
-            against mocked state for narratability. The commitment
-            surface and the system prompt are real either way.
-          </p>
+        <footer className="mt-12 pt-6 border-t border-border flex flex-wrap items-baseline justify-end gap-4">
           <a
             href="https://theseus.network/poa/agents"
             target="_blank"
             rel="noopener noreferrer"
             className="mono text-[11px] uppercase tracking-wider text-fg-dim hover:text-fg transition"
           >
-            All credentials on Proof of Agenthood ↗
+            Credentials on Proof of Agenthood ↗
           </a>
         </footer>
       </div>
@@ -238,9 +226,7 @@ function AgentCardEl({ agent }: { agent: AgentCard }) {
         )}
       </div>
 
-      <p className="text-fg text-[13px] leading-relaxed flex-grow">
-        {agent.description}
-      </p>
+      <div className="flex-grow" />
 
       <div className="flex items-center justify-between gap-3 pt-1">
         <Link
