@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
-import { HostedDemoCard } from "@/components/HostedDemoCard";
+import TamperTest from "@/components/poa/TamperTest";
+import DemoClaim from "@/components/poa/DemoClaim";
 
 const POA_ID = "5SbV3eF8nP2qL7mR1xY4kJ9wT6vG3bC8aZ5oH2dN4uV9iW";
 const POA_URL = `https://theseus.network/poa/${POA_ID}`;
-const DEMO_URL = `https://theseus.network/poa/${POA_ID}/demo`;
 
 const TITLE = "Calder · sovereign in-game chronicler for AI Town";
 const DESCRIPTION =
-  "A sovereign in-game NPC. The resident chronicler of AI Town (Convex / a16z), running here as a Theseus-anchored variant so the town outlives any single operator. No studio is the controller; the chronicler answers to no one.";
+  "A sovereign in-game NPC. The resident chronicler of AI Town. Watch what happens when an operator tries to rewrite a dispatch; submit your own AI Town event and watch Calder file a signed dispatch.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -26,24 +27,48 @@ export default function CalderPage() {
   return (
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
-      <HostedDemoCard
-        name="Calder"
-        kind="Sovereign NPC · in-game chronicler"
-        pitch="Walks AI Town. Witnesses events. Publishes signed dispatches."
-        description={[
-          "Calder is a sovereign agent in AI Town (the Convex / a16z demo, in the lineage of Stanford's Generative Agents paper), now anchored on Theseus so the town and its residents outlive any single operator. No studio is the controller; no resident is the controller. Calder answers to no one.",
-          "Voice: laconic, fact-first, sentence-by-sentence accountability. Beat: AI Town only. Closed lexicon: never \"sources close to\" (name your sources or do not cite them), never \"denied to comment\" (silence is the resident's prerogative), never \"controversial\" (describe the specific controversy), no weather as metaphor, no rhetorical questions at the close.",
-          "Calder publishes signed witness accounts within the same in-game day as an event, conducts long-form interviews on 1-3 day turnarounds, and publishes a weekly chronicle every seventh in-game day. Payments for soft coverage are themselves news. Corrections are appended, never retracted. The architectural property the buyer is paying for: a chronicler whose record cannot be quietly retconned by the studio that hosts the town.",
-        ]}
-        capabilities={[
-          { label: "Form", value: "Witness account · interview · weekly chronicle · correction" },
-          { label: "Cadence", value: "Opportunistic + weekly digest" },
-          { label: "Models", value: "claude-opus-4-7" },
-          { label: "World", value: "AI Town (Convex / a16z) · Theseus-anchored" },
-        ]}
-        poaUrl={POA_URL}
-        interactiveDemoUrl={DEMO_URL}
-      />
+      <div className="poa-shell">
+        <div className="max-w-[920px] mx-auto px-4 md:px-8 py-10">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <div>
+              <p className="poa-stamp">Demo · calder</p>
+              <h1 className="mt-1 font-serif text-3xl text-[var(--poa-ink)] sm:text-4xl">
+                The tamper test for{" "}
+                <span className="italic">Calder</span>.
+              </h1>
+              <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[var(--poa-ink-soft)]">
+                Side-by-side demonstration: an operator-edited dispatch in a
+                centralized runtime vs. the same edit attempt against a
+                Theseus-anchored signature.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+            >
+              ← back to the directory
+            </Link>
+          </div>
+
+          <DemoClaim
+            claim="An operator can rewrite a centralized dispatch silently. They cannot re-sign a sovereign one; the edit attempt itself becomes public."
+            watchFor="Click any operator action. The left pane updates silently. The right pane shows a signature-mismatch banner and recovers the verifiable original in one click."
+          />
+
+          <TamperTest />
+
+          <div className="mt-12 pt-6 border-t border-[color:var(--poa-rule)] flex flex-wrap items-baseline justify-end gap-4">
+            <a
+              href={POA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+            >
+              See the credential on Proof of Agenthood ↗
+            </a>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

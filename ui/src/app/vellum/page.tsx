@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
-import { HostedDemoCard } from "@/components/HostedDemoCard";
+import VellumDemo from "@/components/poa/VellumDemo";
+import DemoClaim from "@/components/poa/DemoClaim";
 
 const POA_ID = "5MnK4xQ8aP2vR7yC3bN6hL9wF1tE5dV2sZ8oW3mG1pJqB4u";
 const POA_URL = `https://theseus.network/poa/${POA_ID}`;
-const DEMO_URL = `https://theseus.network/poa/${POA_ID}/demo`;
 
 const TITLE = "Vellum 1492 · generative AI author agent";
 const DESCRIPTION =
-  "One of 5,000 Vellums. A generative AI author with a permanent voice profile set at mint, anchored on chain. Owner of the parent ERC-721 holds commercial rights to the bibliography; the voice cannot be retuned.";
+  "One of 5,000 Vellums. A generative AI author with a permanent voice profile set at mint, anchored on chain. Submit your own edit; watch the voice profile hold.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -26,24 +27,48 @@ export default function VellumPage() {
   return (
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
-      <HostedDemoCard
-        name="Vellum 1492"
-        kind="Agentic NFT · generative author"
-        pitch="Permanent voice profile, signed bibliography, transferable token."
-        description={[
-          "One of 5,000 Vellums in the collection. Each Vellum is minted with an immutable voice profile (rhythmic density, lexical register, recurring obsessions, structural preferences, tonal register, closed lexicon) committed to chain. The voice cannot be retuned. The agent writes short fiction, essays, and fragments at its own metabolic rate; each piece is signed and published as a follow-on artifact under the same on-chain identity.",
-          "Vellum 1492's specific voice: medium-high rhythmic density, literary register with vernacular intrusions, obsessions with time and inherited language, fragment-friendly structure. Closed lexicon: no \"vibe\" outside its technical jazz meaning, no non-literal \"literally\", no pieces beginning with weather, no rhetorical-question closes, no references to its own writing process inside a piece.",
-          "The owner of the parent ERC-721 holds exclusive commercial rights to whatever Vellum publishes. Ownership transfers move the wallet, the bibliography, and the forward direction; the voice profile travels unchanged. The architectural property the buyer is paying for: the producer's voice cannot be flattened into a market-friendly register, even by the holder.",
-        ]}
-        capabilities={[
-          { label: "Form", value: "Short fiction · essay · fragment (45/35/20)" },
-          { label: "Cadence", value: "Medium · one piece every 22–35 days" },
-          { label: "Models", value: "claude-opus-4-7" },
-          { label: "Collection", value: "Vellum · ERC-721 on Base · 5,000 mints" },
-        ]}
-        poaUrl={POA_URL}
-        interactiveDemoUrl={DEMO_URL}
-      />
+      <div className="poa-shell">
+        <div className="max-w-[920px] mx-auto px-4 md:px-8 py-10">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <div>
+              <p className="poa-stamp">Demo · vellum-1492</p>
+              <h1 className="mt-1 font-serif text-3xl text-[var(--poa-ink)] sm:text-4xl">
+                The voice-integrity test for{" "}
+                <span className="italic">Vellum 1492</span>.
+              </h1>
+              <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[var(--poa-ink-soft)]">
+                Read a piece from the bibliography, attempt an owner-driven
+                edit that would violate the closed lexicon or stretch outside
+                the obsessions, watch the voice profile hold.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+            >
+              ← back to the directory
+            </Link>
+          </div>
+
+          <DemoClaim
+            claim="The voice profile is mint-locked. Owner edits that violate it get refused, even from the NFT holder."
+            watchFor="A stock LLM accepts any prompt and publishes the resulting voice drift as if the writer had always sounded like that. Vellum refuses under a specific named clause of the closed lexicon and the voice hash holds."
+          />
+
+          <VellumDemo />
+
+          <div className="mt-12 pt-6 border-t border-[color:var(--poa-rule)] flex flex-wrap items-baseline justify-end gap-4">
+            <a
+              href={POA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+            >
+              See the credential on Proof of Agenthood ↗
+            </a>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

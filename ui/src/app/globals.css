@@ -144,3 +144,74 @@ body {
   color: var(--red);
 }
 .btn-danger:hover { background: rgba(255, 77, 77, 0.08); border-color: var(--red); }
+
+/* ============================================
+   PROOF OF AGENTHOOD: design tokens for the 5 hosted demos.
+   Copied from theseus.network's .poa-shell scope so the Vellum/
+   Aperture/Marcellus/Quill/Calder demos render with the same
+   identity here as on their PoA profile pages.
+   ============================================ */
+
+.poa-shell {
+  --poa-paper: #F8FAFC;
+  --poa-paper-card: #F1EAE1;
+  --poa-ink: #0f172a;
+  --poa-ink-soft: #475569;
+  --poa-rule: #e2e8f0;
+  --poa-rule-soft: rgba(15, 23, 42, 0.06);
+  --poa-wax: #4f46e5;
+  --poa-wax-soft: rgba(79, 70, 229, 0.12);
+  --poa-destructive: #e53e0c;
+  --poa-destructive-soft: rgba(229, 62, 12, 0.10);
+  --poa-sepia: #94a3b8;
+
+  background: var(--poa-paper);
+  color: var(--poa-ink);
+  position: relative;
+}
+.dark .poa-shell {
+  --poa-paper: #060b16;
+  --poa-paper-card: #0F172A;
+  --poa-ink: #f8fafc;
+  --poa-ink-soft: #94a3b8;
+  --poa-rule: rgba(255, 255, 255, 0.10);
+  --poa-rule-soft: rgba(255, 255, 255, 0.06);
+  --poa-wax: #818cf8;
+  --poa-wax-soft: rgba(129, 140, 248, 0.16);
+  --poa-destructive: #ef4444;
+  --poa-destructive-soft: rgba(239, 68, 68, 0.16);
+  --poa-sepia: #94a3b8;
+
+  background: var(--poa-paper);
+  color: var(--poa-ink);
+}
+
+.cta-ink {
+  background: var(--poa-ink);
+  color: var(--poa-paper);
+  border: 1px solid var(--poa-ink);
+  border-radius: 2px;
+  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
+}
+.cta-ink:hover { background: #000; color: #F8FAFC; }
+.cta-ink:active { transform: translateY(1px); }
+.dark .cta-ink:hover { background: #FFFFFF; color: #0f172a; }
+
+.poa-stamp {
+  color: var(--poa-sepia);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+.poa-shell .poa-playground {
+  background: #FFFFFF;
+  border: 1px solid var(--poa-rule);
+  box-shadow: 0 1px 0 rgba(20, 17, 13, 0.04);
+}
+.dark .poa-shell .poa-playground {
+  background: #000000;
+  border-color: rgba(245, 237, 224, 0.14);
+  box-shadow: 0 1px 0 rgba(245, 237, 224, 0.04);
+}
