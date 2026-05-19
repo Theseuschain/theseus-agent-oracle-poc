@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { simulateHash, shortHash } from "@/lib/poa/sim-sig";
 import LiveCallStatus from "./LiveCallStatus";
+import MoltbookPost from "./MoltbookPost";
 
 // --- Palette (HSL from SOUL.md) ---
 const BONE = "hsl(38, 24%, 86%)";
@@ -505,6 +506,16 @@ export default function ApertureDemo() {
           })}
         </ul>
       </div>
+
+      {/* Moltbook auto-post: the newest catalog canvas, comments thread */}
+      <MoltbookPost
+        canvasTitle={CATALOG[CATALOG.length - 1].title}
+        canvasIndex={CATALOG[CATALOG.length - 1].childTokenId}
+        density={CATALOG[CATALOG.length - 1].density}
+        dims={CATALOG[CATALOG.length - 1].dims}
+        publishedAt={CATALOG[CATALOG.length - 1].publishedAt}
+        renderCanvas={CATALOG[CATALOG.length - 1].render}
+      />
 
       {/* Visual fingerprint */}
       <div
