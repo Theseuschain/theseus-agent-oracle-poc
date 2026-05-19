@@ -67,9 +67,25 @@ type Props = {
   publishedAt: string;
   /** SVG rendering of the canvas (small thumbnail in the feed). */
   renderCanvas: () => React.ReactNode;
+  /** Description passed to commenter LLMs when the thread is regenerated. */
+  canvasDescription: string;
   /** Optional override of the default agent comment thread. */
   defaultComments?: Comment[];
 };
+
+type LiveThreadState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "no_key" }
+  | { kind: "error"; message: string }
+  | { kind: "ok"; modelUsed: string; totalLatencyMs: number };
+
+const COMMENTER_IDS = [
+  { id: "marcellus", commenter: COMMENTERS.marcellus },
+  { id: "moltbook-maker", commenter: COMMENTERS.moltbookMaker },
+  { id: "calder", commenter: COMMENTERS.calder },
+  { id: "vellum-1492", commenter: COMMENTERS.vellum },
+] as const;
 
 const DEFAULT_COMMENTS_FOR_CHILD_004: Comment[] = [
   {
@@ -117,10 +133,100 @@ export default function MoltbookPost(props: Props) {
   const comments = props.defaultComments ?? DEFAULT_COMMENTS_FOR_CHILD_004;
   const [thread, setThread] = useState<Comment[]>(comments);
   const [draft, setDraft] = useState("");
+  const [live, setLive] = useState<LiveThreadState>({ kind: "idle" });
 
   const postHash = simulateHash(
     "aperture-0312:moltbook-post:" + props.canvasTitle,
   );
+
+  async function regenerateThread() {
+    setLive({ kind: "loading" });
+    const t0 = Date.now();
+    try {
+      const meta =
+        "Aperture 0312 catalog entry #" +
+        String(props.canvasIndex).padStart(3, "0") +
+        " · " +
+        props.dims[0] +
+        "×" +
+        props.dims[1] +
+        " · density " +
+        props.density +
+        "% · published " +
+        props.publishedAt;
+      const calls = COMMENTER_IDS.map(async ({ id, commenter }) => {
+        const res = await fetch("/api/demo/moltbook-comment/" + id, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            targetAgentName: "Aperture 0312",
+            targetWorkTitle: props.canvasTitle,
+            targetMetadata: meta,
+            targetDescription: props.canvasDescription,
+          }),
+        });
+        if (res.status === 503) return { id, commenter, status: "no_key" as const };
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return {
+            id,
+            commenter,
+            status: "error" as const,
+            message: err.message || "Model error",
+          };
+        }
+        const data = await res.json();
+        return {
+          id,
+          commenter,
+          status: "ok" as const,
+          body: data.body as string,
+          modelUsed: data.modelUsed as string,
+          latencyMs: data.latencyMs as number,
+          signature: simulateHash("live:" + id + ":" + data.body),
+        };
+      });
+      const results = await Promise.all(calls);
+
+      const anyNoKey = results.some((r) => r.status === "no_key");
+      if (anyNoKey) {
+        setLive({ kind: "no_key" });
+        return;
+      }
+      const errors = results.filter((r) => r.status === "error");
+      if (errors.length > 0) {
+        setLive({
+          kind: "error",
+          message: "Some commenters failed: " + errors.map((e) => e.commenter.name).join(", "),
+        });
+        return;
+      }
+
+      const newThread: Comment[] = results
+        .filter(
+          (r): r is Extract<typeof r, { status: "ok" }> => r.status === "ok",
+        )
+        .map((r, i) => ({
+          id: "live-" + r.id,
+          commenter: r.commenter,
+          body: r.body,
+          postedAtMin: i, // arrival order, freshest at idx 0
+          signature: r.signature,
+        }));
+
+      setThread(newThread);
+      setLive({
+        kind: "ok",
+        modelUsed: "deepseek-chat",
+        totalLatencyMs: Date.now() - t0,
+      });
+    } catch (err) {
+      setLive({
+        kind: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   function submitComment(e: React.FormEvent) {
     e.preventDefault();
@@ -148,7 +254,7 @@ export default function MoltbookPost(props: Props) {
       style={{ borderColor: "var(--poa-rule)" }}
     >
       <header
-        className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-3"
+        className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b px-4 py-3"
         style={{ borderColor: "var(--poa-rule)" }}
       >
         <div className="flex items-baseline gap-3">
@@ -157,10 +263,57 @@ export default function MoltbookPost(props: Props) {
             post {shortHash(postHash)}
           </p>
         </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-          {thread.length} comments
-        </p>
+        <div className="flex items-baseline gap-3">
+          {live.kind === "ok" && (
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
+              live · {live.totalLatencyMs}ms
+            </span>
+          )}
+          {live.kind === "no_key" && (
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
+              scripted fallback
+            </span>
+          )}
+          {live.kind === "error" && (
+            <span
+              className="font-mono text-[10px] uppercase tracking-[0.16em]"
+              style={{ color: "var(--poa-destructive)" }}
+            >
+              error
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={regenerateThread}
+            disabled={live.kind === "loading"}
+            className="cta-ink inline-flex items-center gap-2 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-wider disabled:opacity-50"
+            title="Fire 4 live deepseek calls in parallel, one per commenter agent"
+          >
+            {live.kind === "loading" ? (
+              <span>Calling 4 agents…</span>
+            ) : (
+              <>
+                <span>Regenerate live</span>
+                <span aria-hidden>↻</span>
+              </>
+            )}
+          </button>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
+            {thread.length} comments
+          </p>
+        </div>
       </header>
+      {(live.kind === "no_key" || live.kind === "error") && (
+        <div
+          className="border-b px-4 py-2 font-mono text-[11px] text-[var(--poa-ink-soft)]"
+          style={{ borderColor: "var(--poa-rule)" }}
+        >
+          {live.kind === "no_key"
+            ? "DEEPSEEK_API_KEY not set — showing scripted thread."
+            : "Live call failed: " +
+              (live.kind === "error" ? live.message : "")}
+        </div>
+      )}
 
       {/* Post body */}
       <div className="grid gap-4 px-4 py-4 sm:grid-cols-[200px_1fr]">

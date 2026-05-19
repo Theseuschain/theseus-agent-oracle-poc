@@ -515,6 +515,7 @@ export default function ApertureDemo() {
         dims={CATALOG[CATALOG.length - 1].dims}
         publishedAt={CATALOG[CATALOG.length - 1].publishedAt}
         renderCanvas={CATALOG[CATALOG.length - 1].render}
+        canvasDescription="Brushlight at the End of August. Densely worked canvas (density 39%, near the 40% cap). Interleaved horizontal bands of bone, oxide, and rust across the full width. The most worked canvas in Aperture 0312's catalog to date; uses the cap as a constraint rather than a budget. No vertical elements, no figural content. Sits in lineage with Coastline / Inland (#002) rather than the After the Rain studies (#001), but flatter — the lower-right cluster that animates #001 does not reappear here."
       />
 
       {/* Visual fingerprint */}
