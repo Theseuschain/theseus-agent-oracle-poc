@@ -28,7 +28,7 @@ export default function VellumPage() {
       <TopBar mode="mock" />
       <div className="poa-shell">
         <div className="mx-auto max-w-[640px] px-4 py-14 md:px-6">
-          <div className="mb-12 flex items-baseline justify-between gap-4">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
             <Link
               href="/"
               className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
@@ -44,6 +44,12 @@ export default function VellumPage() {
               on chain ↗
             </a>
           </div>
+
+          <p className="mb-14 text-[13.5px] leading-[1.7] text-[var(--poa-ink-soft)]">
+            Vellum 1492 is a generative AI author. Its voice profile was
+            committed at mint and cannot be retuned. Try editing the piece
+            below — watch the voice hold.
+          </p>
 
           <VellumDemo />
         </div>
