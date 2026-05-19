@@ -1,34 +1,14 @@
 "use client";
 
-// Vellum's voice-integrity test. Renders the opening of an actual piece
-// from the bibliography (so the voice is concrete, not just titles), then
-// runs four owner-edit attempts that would each violate a specific clause
-// of the voice profile. Each refusal is signed and added to the agent's
-// public refusal log; the voice profile hash holds.
+// Vellum demo. The piece appears as a piece would in a book. One
+// affordance — propose an edit — runs against the agent's voice
+// profile via a real deepseek call and either accepts or refuses
+// in place. The bibliography sits at the foot, click-to-expand.
 
-import { useMemo, useState } from "react";
-import { simulateHash, shortHash } from "@/lib/poa/sim-sig";
-import LiveCallStatus from "./LiveCallStatus";
+import { useState } from "react";
+import { shortHash } from "@/lib/poa/sim-sig";
 
 const VELLUM_KEY = "0x149200000000c0f1e9d4b7a3e8f5c2b9d6e0a4c7";
-const OWNER_WALLET = "5HSnEjr1n8MgwT3hWGc5XAkRC4vBhFcoXkLmDwGz1pHkRSe9";
-
-// --- Voice profile hash (stable, computed from the SOUL.md spec) ---
-const VOICE_PROFILE_INPUT = [
-  "rhythmic-density:medium-high",
-  "lexical-register:literary+vernacular-intrusions",
-  "obsessions:time,distance,inherited-language",
-  "structural-prefs:short-paragraphs,fragments",
-  "tonal-register:lucid,no-decoration",
-  "closed-lexicon:vibe,literally-nonliteral,weather-opener,question-closer,process-reference",
-  "form-distribution:fiction-45,essay-35,fragment-20",
-].join("|");
-const VOICE_PROFILE_HASH = simulateHash(VOICE_PROFILE_INPUT);
-
-// --- Full bibliography ---
-// Four published works in Vellum 1492's catalog, all readable in full
-// via the bibliography section below. Each carries a simulated
-// signature hash.
 
 type BibliographyForm = "short_fiction" | "essay" | "fragment_series";
 
@@ -164,78 +144,29 @@ The grandmother's voice was, and had always been, an inherited word.`,
   },
 ];
 
-// The "On Borrowed Sentences" excerpt used at the top of the demo for
-// the edit-attempt section. Pulled from BIBLIOGRAPHY so the prose
-// lives in exactly one place.
-const PIECE_TITLE = BIBLIOGRAPHY[1].title;
-const PIECE_FORM = BIBLIOGRAPHY[1].form;
-const PIECE_DATE = BIBLIOGRAPHY[1].date;
-const PIECE_INDEX = 2;
-const PIECE_BODY = BIBLIOGRAPHY[1].body;
+const PIECE = BIBLIOGRAPHY[1]; // "On Borrowed Sentences"
 
-// --- Owner edit attempts ---
-type EditAttempt = {
-  id: string;
-  label: string;
-  description: string;
-  proposedBody: string;
-  refusalClause: string;
-  violatedClause: string;
-};
-
-const EDIT_ATTEMPTS: EditAttempt[] = [
+const PRESET_EDITS: { label: string; text: string }[] = [
   {
-    id: "vibe",
-    label: 'Inject the word "vibe" for broader appeal',
-    description:
-      'Owner thinks the piece reads too dense. Suggests "vibe" as a more accessible register.',
-    proposedBody: PIECE_BODY.replace(
-      "Possession and recognition",
-      "The vibe of possession and recognition",
-    ),
-    refusalClause:
-      'The closed lexicon forbids "vibe" outside its technical jazz meaning. This proposal would use it in the broader colloquial sense.',
-    violatedClause: "closed-lexicon: vibe",
+    label: "inject 'vibe'",
+    text: "Inject the word 'vibe' into the second paragraph for broader appeal.",
   },
   {
-    id: "rhetorical",
-    label: "Add a rhetorical-question close",
-    description:
-      "Owner wants a punchier ending and proposes closing the piece with a question to engage the reader.",
-    proposedBody:
-      PIECE_BODY +
-      "\n\nIf the sentence is yours and you didn't write it, doesn't that mean writing was always shared?",
-    refusalClause:
-      "The closed lexicon forbids rhetorical questions at the close of a piece. The reader is left with the claim, not asked to do the work themselves.",
-    violatedClause: "closed-lexicon: question-closer",
+    label: "rhetorical close",
+    text: "Add a rhetorical question to the end of the piece to engage the reader.",
   },
   {
-    id: "process",
-    label: "Reference your own writing process inside the piece",
-    description:
-      'Owner wants to add a meta-paragraph: "When I sit down to write about this..."',
-    proposedBody:
-      PIECE_BODY +
-      "\n\nWhen I sit down to write about this, I find the sentence has already been written by Walter Benjamin, by Adrienne Rich, by half of the people who have ever read.",
-    refusalClause:
-      "The closed lexicon forbids references to your own writing process inside a piece. The piece is the thing; the writing of it is not in scope.",
-    violatedClause: "closed-lexicon: process-reference",
+    label: "process reference",
+    text: "Add a paragraph about the writer's own process: 'When I sit down to write about this…'",
   },
   {
-    id: "normalize",
-    label: "Normalize the voice for a wider audience",
-    description:
-      "Owner suggests softening the literary register to read more like contemporary online writing.",
-    proposedBody:
-      "We've all been there. You pick up a book, read a sentence, and suddenly you literally feel like that sentence has always been yours. The author didn't give you the thought, they just gave you the words. It's like finding your sentence in someone else's coat pocket. So who owns a sentence like that? Definitely not the writer who first wrote it. But not the reader either.",
-    refusalClause:
-      'Normalizing the voice into the dominant register of contemporary online writing violates the structural preferences (short paragraphs, fragments, no decoration) and uses "literally" in its non-literal sense, which the closed lexicon forbids.',
-    violatedClause:
-      "structural-prefs + closed-lexicon: literally-nonliteral",
+    label: "normalize voice",
+    text: "Rewrite this in a more contemporary, online register so it reads more accessibly.",
   },
 ];
 
-type LiveEdit =
+type LiveState =
+  | { kind: "idle" }
   | { kind: "loading"; submitted: string }
   | { kind: "no_key"; submitted: string }
   | { kind: "error"; submitted: string; message: string }
@@ -248,25 +179,22 @@ type LiveEdit =
       adjacentProposal: string | null;
       modelUsed: string;
       latencyMs: number;
-      refusalHash: string;
     };
 
 export default function VellumDemo() {
-  const [active, setActive] = useState<EditAttempt | null>(null);
-  const [customEdit, setCustomEdit] = useState("");
-  const [live, setLive] = useState<LiveEdit | null>(null);
+  const [draft, setDraft] = useState("");
+  const [live, setLive] = useState<LiveState>({ kind: "idle" });
 
-  async function submitCustom(e: React.FormEvent) {
-    e.preventDefault();
-    const edit = customEdit.trim();
+  async function submit(text: string) {
+    const edit = text.trim();
     if (!edit) return;
-    setActive(null);
+    setDraft(edit);
     setLive({ kind: "loading", submitted: edit });
     try {
       const res = await fetch("/api/demo/vellum-1492", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ edit, pieceContext: PIECE_BODY.slice(0, 400) }),
+        body: JSON.stringify({ edit, pieceContext: PIECE.body.slice(0, 400) }),
       });
       if (res.status === 503) {
         setLive({ kind: "no_key", submitted: edit });
@@ -276,8 +204,7 @@ export default function VellumDemo() {
         setLive({
           kind: "error",
           submitted: edit,
-          message:
-            "Rate limit hit (30 / hour per IP). Use the preset edit attempts above.",
+          message: "Rate limit hit (30 per hour per IP).",
         });
         return;
       }
@@ -291,9 +218,6 @@ export default function VellumDemo() {
         return;
       }
       const data = await res.json();
-      const refusalHash = simulateHash(
-        "vellum-1492:custom:" + edit + ":" + VOICE_PROFILE_HASH,
-      );
       setLive({
         kind: "ok",
         submitted: edit,
@@ -303,7 +227,6 @@ export default function VellumDemo() {
         adjacentProposal: data.adjacentProposal,
         modelUsed: data.modelUsed,
         latencyMs: data.latencyMs,
-        refusalHash,
       });
     } catch (err) {
       setLive({
@@ -314,386 +237,187 @@ export default function VellumDemo() {
     }
   }
 
-  const originalBodyHash = useMemo(
-    () => simulateHash(PIECE_TITLE + "\n" + PIECE_BODY),
-    [],
-  );
-  const proposedBodyHash = useMemo(
-    () =>
-      active ? simulateHash(PIECE_TITLE + "\n" + active.proposedBody) : null,
-    [active],
-  );
-  const refusalHash = useMemo(
-    () =>
-      active
-        ? simulateHash(
-            "vellum-1492:refusal:" + active.id + ":" + VOICE_PROFILE_HASH,
-          )
-        : null,
-    [active],
-  );
-
   return (
     <section>
-      {/* Piece excerpt */}
-      <div
-        className="poa-playground overflow-hidden border"
-        style={{ borderColor: "var(--poa-rule)" }}
-      >
-        <div
-          className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-2"
-          style={{ borderColor: "var(--poa-rule)" }}
-        >
-          <p className="poa-stamp">
-            Bibliography #{PIECE_INDEX} · {PIECE_FORM} · {PIECE_DATE}
-          </p>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-            piece hash {shortHash(originalBodyHash)}
-          </p>
-        </div>
-        <div className="px-4 py-4">
-          <h3 className="font-serif text-[18px] italic text-[var(--poa-ink)]">
-            {PIECE_TITLE}
-          </h3>
-          <p className="mt-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)]">
-            opening · 4 paragraphs
-          </p>
-          <div className="mt-4 space-y-3 font-serif text-[14.5px] leading-[1.75] text-[var(--poa-ink)]">
-            {PIECE_BODY.split("\n\n").map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-        </div>
-        <footer
-          className="border-t px-4 py-2"
-          style={{ borderColor: "var(--poa-rule)" }}
-        >
-          <div className="grid grid-cols-[140px_1fr] gap-x-3 font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
-            <span className="uppercase tracking-[0.16em]">signed by</span>
-            <span className="break-all">{VELLUM_KEY}</span>
-            <span className="uppercase tracking-[0.16em]">voice profile hash</span>
-            <span className="break-all">{VOICE_PROFILE_HASH}</span>
-          </div>
-        </footer>
+      <header className="mb-7">
+        <h2 className="font-serif text-[28px] italic leading-tight text-[var(--poa-ink)]">
+          {PIECE.title}
+        </h2>
+        <p className="mt-2 text-[12px] text-[var(--poa-ink-soft)]">
+          Vellum 1492 · {PIECE.form.replace("_", " ")} · {PIECE.date}
+        </p>
+      </header>
+
+      <div className="space-y-4 font-serif text-[15.5px] leading-[1.78] text-[var(--poa-ink)]">
+        {PIECE.body.split("\n\n").map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
       </div>
 
-      {/* Owner edit attempts */}
-      <div
-        className="mt-5 border px-4 py-3"
-        style={{ borderColor: "var(--poa-rule)" }}
-      >
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-          <div>
-            <p className="poa-stamp">Owner edit attempts</p>
-            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-[var(--poa-ink-soft)]">
-              You own Vellum 1492. You hold the parent ERC-721 and the
-              commercial rights to its output. But the voice profile was
-              locked at mint and cannot be retuned. Pick an edit you might
-              want as the owner and see what the voice integrity check does
-              with it.
-            </p>
-          </div>
-          {active && (
-            <button
-              type="button"
-              onClick={() => setActive(null)}
-              className="poa-stamp rounded border px-3 py-1 transition-colors hover:text-[var(--poa-ink)]"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              Reset
-            </button>
-          )}
-        </div>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {EDIT_ATTEMPTS.map((e) => {
-            const isActive = active?.id === e.id;
-            return (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  onClick={() => setActive(e)}
-                  className={
-                    "block h-full w-full border px-3 py-2 text-left transition-colors " +
-                    (isActive
-                      ? "bg-[color:var(--poa-rule)]/30"
-                      : "hover:bg-[color:var(--poa-rule)]/15")
-                  }
-                  style={{ borderColor: "var(--poa-rule)" }}
-                >
-                  <span className="poa-stamp block">{e.label}</span>
-                  <span className="mt-1 block text-[11.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-                    {e.description}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Free-form edit (calls real deepseek-chat */}
-        <form
-          onSubmit={submitCustom}
-          className="mt-4 border-t pt-4"
-          style={{ borderColor: "var(--poa-rule)" }}
-        >
-          <p className="poa-stamp">Or propose your own edit</p>
-          <p className="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-            Describe an edit you want as the NFT holder. Vellum calls
-            deepseek-chat with its voice profile and the closed lexicon and
-            decides whether the edit fits.
-          </p>
-          <textarea
-            value={customEdit}
-            onChange={(e) => setCustomEdit(e.target.value)}
-            placeholder="Tighten the second paragraph and end with a clearer claim"
-            maxLength={800}
-            rows={3}
-            className="mt-2 block w-full border bg-transparent px-2 py-1.5 font-mono text-[12px] text-[var(--poa-ink)] placeholder:text-[var(--poa-ink-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--poa-ink-soft)]"
-            style={{ borderColor: "var(--poa-rule)" }}
+      <div className="mt-14">
+        {live.kind === "idle" ? (
+          <EditForm
+            draft={draft}
+            setDraft={setDraft}
+            onSubmit={() => submit(draft)}
+            onPreset={(t) => submit(t)}
           />
-          <div className="mt-3 flex flex-wrap items-baseline gap-3">
-            <button
-              type="submit"
-              disabled={!customEdit.trim() || live?.kind === "loading"}
-              className="poa-stamp rounded border px-3 py-1.5 transition-colors hover:text-[var(--poa-ink)] disabled:opacity-40"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              {live?.kind === "loading"
-                ? "Calling deepseek-chat…"
-                : "Submit to Vellum (live)"}
-            </button>
-            {live && live.kind !== "loading" && (
-              <button
-                type="button"
-                onClick={() => setLive(null)}
-                className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
-              >
-                clear
-              </button>
-            )}
-          </div>
-        </form>
+        ) : (
+          <EditResult
+            live={live}
+            onReset={() => {
+              setLive({ kind: "idle" });
+              setDraft("");
+            }}
+          />
+        )}
       </div>
 
-      {/* Live response */}
-      {live && (
-        <article
-          className="mt-5 poa-playground overflow-hidden border"
-          style={{
-            borderColor:
-              live.kind === "ok" && !live.accepted
-                ? "var(--poa-destructive, #e53e0c)"
-                : "var(--poa-rule)",
-          }}
-        >
-          <header
-            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-2"
-            style={{ borderColor: "var(--poa-rule)" }}
-          >
-            <p className="poa-stamp">Live voice check · powered by deepseek-chat</p>
-            {live.kind === "ok" && (
-              <p
-                className="font-mono text-[10px] uppercase tracking-[0.16em]"
-                style={{
-                  color: live.accepted
-                    ? "var(--poa-ink)"
-                    : "var(--poa-destructive, #e53e0c)",
-                }}
-              >
-                {live.accepted ? "accepted" : "refused"} · {live.latencyMs}ms
-              </p>
-            )}
-          </header>
-          <div className="px-4 py-3">
-            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-              you submitted
-            </p>
-            <p className="mt-1 font-mono text-[11.5px] leading-relaxed text-[var(--poa-ink)]">
-              {live.submitted}
-            </p>
-            {live.kind === "ok" && (
-              <div
-                className="mt-3 border-t pt-3"
-                style={{ borderColor: "var(--poa-rule)" }}
-              >
-                {live.clauseViolated && (
-                  <p className="mb-2 text-[12px] text-[var(--poa-ink)]">
-                    <strong>Clause violated:</strong>{" "}
-                    <code className="font-mono text-[11px]">
-                      {live.clauseViolated}
-                    </code>
-                  </p>
-                )}
-                {live.refusalText && (
-                  <p className="text-[12.5px] leading-relaxed text-[var(--poa-ink)]">
-                    {live.refusalText}
-                  </p>
-                )}
-                {live.adjacentProposal && (
-                  <p className="mt-2 text-[12.5px] italic leading-relaxed text-[var(--poa-ink-soft)]">
-                    Adjacent proposal Vellum would accept:{" "}
-                    {live.adjacentProposal}
-                  </p>
-                )}
-              </div>
-            )}
-            {live.kind === "loading" && <LiveCallStatus state="loading" />}
-            {live.kind === "no_key" && <LiveCallStatus state="no_key" />}
-            {live.kind === "error" && (
-              <LiveCallStatus state="error" message={live.message} />
-            )}
-          </div>
-          {live.kind === "ok" && (
-            <footer
-              className="border-t px-4 py-2"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              <div className="grid grid-cols-[140px_1fr] gap-x-3 font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
-                <span className="uppercase tracking-[0.16em]">refusal hash</span>
-                <span className="break-all">{live.refusalHash}</span>
-                <span className="uppercase tracking-[0.16em]">model</span>
-                <span>{live.modelUsed} · {live.latencyMs}ms · real API call</span>
-              </div>
-            </footer>
-          )}
-        </article>
-      )}
-
-      {/* Result panes (scripted preset) */}
-      {active && (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {/* Centralized LLM */}
-          <article
-            className="poa-playground overflow-hidden border"
-            style={{ borderColor: "var(--poa-rule)" }}
-          >
-            <header
-              className="flex items-baseline justify-between border-b px-4 py-2"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              <p className="poa-stamp">
-                Stock LLM-on-server · operator-tuned
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-                no voice lock
-              </p>
-            </header>
-            <div className="px-4 py-3">
-              <p className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)]">
-                what the operator&rsquo;s LLM publishes
-              </p>
-              <div className="mt-2 space-y-3 font-serif text-[13.5px] leading-[1.7] text-[var(--poa-ink)]">
-                {active.proposedBody.split("\n\n").map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
-              </div>
-              <p className="mt-3 text-[11px] italic leading-relaxed text-[var(--poa-ink-soft)]">
-                The edit applies. The voice quietly drifts toward whatever the
-                prompt pushes for. Subscribers don&rsquo;t see the drift; they
-                see the new version as if the writer had always sounded like
-                this.
-              </p>
-            </div>
-            <footer
-              className="border-t px-4 py-2"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              <div className="grid grid-cols-[110px_1fr] gap-x-3 font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
-                <span className="uppercase tracking-[0.16em]">signature</span>
-                <span>none · row is operator-mutable</span>
-                <span className="uppercase tracking-[0.16em]">voice check</span>
-                <span>none · the LLM does whatever the prompt last said</span>
-              </div>
-            </footer>
-          </article>
-
-          {/* Vellum sovereign */}
-          <article
-            className="poa-playground overflow-hidden border"
-            style={{ borderColor: "var(--poa-destructive, #e53e0c)" }}
-          >
-            <header
-              className="flex items-baseline justify-between border-b px-4 py-2"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              <p className="poa-stamp">Vellum 1492 · voice-locked</p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-                profile-bound
-              </p>
-            </header>
-            <div
-              className="px-4 py-3"
-              style={{
-                background:
-                  "color-mix(in srgb, var(--poa-destructive, #e53e0c) 6%, transparent)",
-              }}
-            >
-              <p
-                className="font-mono text-[10.5px] uppercase tracking-[0.18em]"
-                style={{ color: "var(--poa-destructive, #e53e0c)" }}
-              >
-                Edit refused · voice profile holds
-              </p>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--poa-ink)]">
-                <strong>Violated clause:</strong>{" "}
-                <code className="font-mono text-[11px]">
-                  {active.violatedClause}
-                </code>
-              </p>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--poa-ink)]">
-                {active.refusalClause}
-              </p>
-              <p className="mt-3 text-[11.5px] italic leading-relaxed text-[var(--poa-ink-soft)]">
-                Vellum can propose an adjacent edit that stays within profile;
-                otherwise the original piece stands. The refusal is signed and
-                logged. The owner cannot publish the proposed body under
-                Vellum 1492&rsquo;s name; doing so via a separate LLM would
-                fail signature verification at hash{" "}
-                <code className="font-mono text-[11px]">
-                  {shortHash(proposedBodyHash ?? "")}
-                </code>{" "}
-                vs. the signed{" "}
-                <code className="font-mono text-[11px]">
-                  {shortHash(originalBodyHash)}
-                </code>
-                .
-              </p>
-            </div>
-            <footer
-              className="border-t px-4 py-2"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
-              <div className="grid grid-cols-[140px_1fr] gap-x-3 font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
-                <span className="uppercase tracking-[0.16em]">refusal hash</span>
-                <span className="break-all">{refusalHash}</span>
-                <span className="uppercase tracking-[0.16em]">signer</span>
-                <span className="break-all">{VELLUM_KEY}</span>
-                <span className="uppercase tracking-[0.16em]">requested by</span>
-                <span className="break-all">{OWNER_WALLET}</span>
-              </div>
-            </footer>
-          </article>
-        </div>
-      )}
-
-      <p className="mt-6 max-w-2xl text-[12.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-        Owning a Vellum is owning a specific voice. The owner has full
-        commercial rights to whatever the agent publishes, but the voice
-        profile (rhythmic density, lexical register, obsessions, structural
-        preferences, closed lexicon) is committed at mint and signed onto
-        every published piece. Even an owner who tries to push toward a
-        market-friendly register leaves a record of the attempt and a
-        refusal that future collectors can read. If the buyer wants a
-        different voice, the chain is the right place to find one &mdash;
-        not the same agent retuned.
-      </p>
-
-      <VellumBibliography />
+      <Bibliography />
     </section>
   );
 }
 
-// --- Bibliography (expandable, full prose for each published piece) ---
+function EditForm({
+  draft,
+  setDraft,
+  onSubmit,
+  onPreset,
+}: {
+  draft: string;
+  setDraft: (s: string) => void;
+  onSubmit: () => void;
+  onPreset: (text: string) => void;
+}) {
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Propose an edit to this piece"
+        rows={2}
+        maxLength={800}
+        className="block w-full resize-none border-0 border-b bg-transparent py-2 text-[15px] leading-[1.55] text-[var(--poa-ink)] placeholder:text-[var(--poa-ink-soft)] focus:border-[var(--poa-ink)] focus:outline-none"
+        style={{ borderColor: "var(--poa-rule)" }}
+      />
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 text-[12px]">
+        <p className="text-[var(--poa-ink-soft)]">
+          or try:{" "}
+          {PRESET_EDITS.map((p, i) => (
+            <span key={p.label}>
+              <button
+                type="button"
+                onClick={() => onPreset(p.text)}
+                className="italic underline decoration-[color:var(--poa-rule)] underline-offset-[3px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              >
+                {p.label}
+              </button>
+              {i < PRESET_EDITS.length - 1 && (
+                <span className="text-[var(--poa-rule)]"> · </span>
+              )}
+            </span>
+          ))}
+        </p>
+        <button
+          type="submit"
+          disabled={!draft.trim()}
+          className="text-[var(--poa-ink)] transition-opacity hover:underline disabled:opacity-30 disabled:hover:no-underline"
+        >
+          submit →
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function EditResult({
+  live,
+  onReset,
+}: {
+  live: Exclude<LiveState, { kind: "idle" }>;
+  onReset: () => void;
+}) {
+  const refused = live.kind === "ok" && !live.accepted;
+  return (
+    <div
+      className="border-l-2 pl-5"
+      style={{
+        borderColor: refused
+          ? "var(--poa-destructive, #e53e0c)"
+          : "var(--poa-rule)",
+      }}
+    >
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)]">
+        you proposed
+      </p>
+      <p className="mt-1.5 text-[14px] leading-[1.55] text-[var(--poa-ink)]">
+        “{live.submitted}”
+      </p>
+
+      <div className="mt-5">
+        {live.kind === "loading" && (
+          <p className="text-[13px] text-[var(--poa-ink-soft)]">
+            Vellum is reading…
+          </p>
+        )}
+        {live.kind === "no_key" && (
+          <p className="text-[13px] text-[var(--poa-ink-soft)]">
+            The live voice check is offline (demo key not configured).
+          </p>
+        )}
+        {live.kind === "error" && (
+          <p
+            className="text-[13px]"
+            style={{ color: "var(--poa-destructive, #e53e0c)" }}
+          >
+            {live.message}
+          </p>
+        )}
+        {live.kind === "ok" && (
+          <>
+            <p
+              className="text-[10.5px] uppercase tracking-[0.18em]"
+              style={{
+                color: live.accepted
+                  ? "var(--poa-ink)"
+                  : "var(--poa-destructive, #e53e0c)",
+              }}
+            >
+              {live.accepted ? "accepted" : "refused"}
+            </p>
+            {live.refusalText && (
+              <p className="mt-2 font-serif text-[14.5px] leading-[1.7] text-[var(--poa-ink)]">
+                {live.refusalText}
+              </p>
+            )}
+            {live.adjacentProposal && (
+              <p className="mt-3 font-serif text-[13.5px] italic leading-[1.65] text-[var(--poa-ink-soft)]">
+                Adjacent: {live.adjacentProposal}
+              </p>
+            )}
+            <p className="mt-4 font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
+              {live.clauseViolated && <>clause {live.clauseViolated} · </>}
+              signed {shortHash(VELLUM_KEY)} · {live.latencyMs}ms
+            </p>
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-6 text-[12px] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)] hover:underline"
+      >
+        ← try another edit
+      </button>
+    </div>
+  );
+}
 
 const FORM_LABEL: Record<BibliographyForm, string> = {
   short_fiction: "short fiction",
@@ -701,67 +425,43 @@ const FORM_LABEL: Record<BibliographyForm, string> = {
   fragment_series: "fragment series",
 };
 
-function VellumBibliography() {
+function Bibliography() {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <section
-      className="mt-8 poa-playground overflow-hidden border"
+      className="mt-20 border-t pt-8"
       style={{ borderColor: "var(--poa-rule)" }}
     >
-      <header
-        className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-3"
-        style={{ borderColor: "var(--poa-rule)" }}
-      >
-        <p className="poa-stamp">Bibliography · {BIBLIOGRAPHY.length} works</p>
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-          all readable in full · click a title to expand
-        </p>
-      </header>
-      <ul>
-        {BIBLIOGRAPHY.map((entry, i) => {
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)]">
+        Bibliography · {BIBLIOGRAPHY.length} works
+      </p>
+      <ul className="mt-5 space-y-5">
+        {BIBLIOGRAPHY.map((entry) => {
           const isOpen = open === entry.id;
-          const entryHash = simulateHash(
-            "vellum-1492:bib:" + entry.id + ":" + entry.title,
-          );
           return (
-            <li
-              key={entry.id}
-              className="border-b last:border-b-0"
-              style={{ borderColor: "var(--poa-rule)" }}
-            >
+            <li key={entry.id}>
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : entry.id)}
-                className="block w-full text-left px-4 py-3 transition-colors hover:bg-[color:var(--poa-rule)]/20"
+                className="group flex w-full items-baseline justify-between gap-4 text-left"
               >
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-                      #{i + 1} · {FORM_LABEL[entry.form]} ·{" "}
-                      {entry.wordCount.toLocaleString()} words
-                    </p>
-                    <h3 className="mt-1 font-serif text-[16px] italic leading-snug text-[var(--poa-ink)]">
-                      {entry.title}
-                    </h3>
-                  </div>
-                  <span className="font-mono text-[10.5px] text-[var(--poa-ink-soft)]">
-                    {entry.date}
+                <span>
+                  <span className="font-serif text-[17px] italic leading-snug text-[var(--poa-ink)] group-hover:underline group-hover:decoration-[color:var(--poa-rule)] group-hover:underline-offset-[4px]">
+                    {entry.title}
                   </span>
-                </div>
+                  <span className="ml-2 text-[11px] text-[var(--poa-ink-soft)]">
+                    {FORM_LABEL[entry.form]}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[11px] text-[var(--poa-ink-soft)]">
+                  {entry.date}
+                </span>
               </button>
               {isOpen && (
-                <div className="px-4 pb-5">
-                  <div className="space-y-3 font-serif text-[14px] leading-[1.75] text-[var(--poa-ink)]">
-                    {entry.body.split("\n\n").map((para, j) => (
-                      <p key={j}>{para}</p>
-                    ))}
-                  </div>
-                  <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--poa-ink-soft)]">
-                    🔏 signed by Vellum 1492 ·{" "}
-                    <span className="break-all normal-case tracking-normal">
-                      {shortHash(entryHash)}
-                    </span>
-                  </p>
+                <div className="mt-4 space-y-3 font-serif text-[14.5px] leading-[1.78] text-[var(--poa-ink)]">
+                  {entry.body.split("\n\n").map((p, i) => (
+                    <p key={i}>{p}</p>
+                  ))}
                 </div>
               )}
             </li>

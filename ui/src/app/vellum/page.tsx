@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
 import VellumDemo from "@/components/poa/VellumDemo";
-import DemoClaim from "@/components/poa/DemoClaim";
 
 const POA_ID = "5MnK4xQ8aP2vR7yC3bN6hL9wF1tE5dV2sZ8oW3mG1pJqB4u";
 const POA_URL = `https://theseus.network/poa/${POA_ID}`;
@@ -28,45 +27,25 @@ export default function VellumPage() {
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
       <div className="poa-shell">
-        <div className="max-w-[920px] mx-auto px-4 md:px-8 py-10">
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-            <div>
-              <p className="poa-stamp">Demo · vellum-1492</p>
-              <h1 className="mt-1 font-serif text-3xl text-[var(--poa-ink)] sm:text-4xl">
-                The voice-integrity test for{" "}
-                <span className="italic">Vellum 1492</span>.
-              </h1>
-              <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-                Read a piece from the bibliography, attempt an owner-driven
-                edit that would violate the closed lexicon or stretch outside
-                the obsessions, watch the voice profile hold.
-              </p>
-            </div>
+        <div className="mx-auto max-w-[640px] px-4 py-14 md:px-6">
+          <div className="mb-12 flex items-baseline justify-between gap-4">
             <Link
               href="/"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              ← back to the directory
+              ← directory
             </Link>
-          </div>
-
-          <DemoClaim
-            claim="The voice profile is mint-locked. Owner edits that violate it get refused, even from the NFT holder."
-            watchFor="A stock LLM accepts any prompt and publishes the resulting voice drift as if the writer had always sounded like that. Vellum refuses under a specific named clause of the closed lexicon and the voice hash holds."
-          />
-
-          <VellumDemo />
-
-          <div className="mt-12 pt-6 border-t border-[color:var(--poa-rule)] flex flex-wrap items-baseline justify-end gap-4">
             <a
               href={POA_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              See the credential on Proof of Agenthood ↗
+              on chain ↗
             </a>
           </div>
+
+          <VellumDemo />
         </div>
       </div>
     </main>
