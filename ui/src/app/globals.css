@@ -146,72 +146,88 @@ body {
 .btn-danger:hover { background: rgba(255, 77, 77, 0.08); border-color: var(--red); }
 
 /* ============================================
-   PROOF OF AGENTHOOD: design tokens for the 5 hosted demos.
-   Copied from theseus.network's .poa-shell scope so the Vellum/
-   Aperture/Marcellus/Quill/Calder demos render with the same
-   identity here as on their PoA profile pages.
+   PROOF OF AGENTHOOD: design tokens for the 5 hosted demos,
+   mapped onto demo-agents' native dark palette so the new pages
+   match the aesthetic of the 8 adjudication demos (aave, terra,
+   adjudicate, bridge, governance, aviation, fund, launch-sniper).
+
+   The demo components reference --poa-* tokens internally; we
+   redirect those at demo-agents' --bg / --fg / --surface / --border
+   / --coral so no per-component rewrite is needed.
    ============================================ */
 
 .poa-shell {
-  --poa-paper: #F8FAFC;
-  --poa-paper-card: #F1EAE1;
-  --poa-ink: #0f172a;
-  --poa-ink-soft: #475569;
-  --poa-rule: #e2e8f0;
-  --poa-rule-soft: rgba(15, 23, 42, 0.06);
-  --poa-wax: #4f46e5;
-  --poa-wax-soft: rgba(79, 70, 229, 0.12);
-  --poa-destructive: #e53e0c;
-  --poa-destructive-soft: rgba(229, 62, 12, 0.10);
-  --poa-sepia: #94a3b8;
+  /* Surfaces: --bg as the page, --surface for the inset card. */
+  --poa-paper: var(--bg);
+  --poa-paper-card: var(--surface);
+
+  /* Text: --fg as primary, --fg-dim as secondary, --fg-mute as caption. */
+  --poa-ink: var(--fg);
+  --poa-ink-soft: var(--fg-dim);
+  --poa-sepia: var(--fg-mute);
+
+  /* Lines: --border + a softer rule for inner dividers. */
+  --poa-rule: var(--border);
+  --poa-rule-soft: rgba(255, 255, 255, 0.05);
+
+  /* Accent: --coral. PoA used indigo; demo-agents uses coral. */
+  --poa-wax: var(--coral);
+  --poa-wax-soft: rgba(255, 91, 58, 0.12);
+
+  /* Destructive: --red, kept as the same warning color. */
+  --poa-destructive: var(--red);
+  --poa-destructive-soft: rgba(255, 77, 77, 0.10);
 
   background: var(--poa-paper);
   color: var(--poa-ink);
   position: relative;
-}
-.dark .poa-shell {
-  --poa-paper: #060b16;
-  --poa-paper-card: #0F172A;
-  --poa-ink: #f8fafc;
-  --poa-ink-soft: #94a3b8;
-  --poa-rule: rgba(255, 255, 255, 0.10);
-  --poa-rule-soft: rgba(255, 255, 255, 0.06);
-  --poa-wax: #818cf8;
-  --poa-wax-soft: rgba(129, 140, 248, 0.16);
-  --poa-destructive: #ef4444;
-  --poa-destructive-soft: rgba(239, 68, 68, 0.16);
-  --poa-sepia: #94a3b8;
-
-  background: var(--poa-paper);
-  color: var(--poa-ink);
+  font-family: var(--font-sans);
 }
 
+/* CTA: coral-accent button matching demo-agents' .btn pattern. */
 .cta-ink {
-  background: var(--poa-ink);
-  color: var(--poa-paper);
-  border: 1px solid var(--poa-ink);
-  border-radius: 2px;
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
+  background: var(--coral);
+  color: var(--bg);
+  border: 1px solid var(--coral);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
 }
-.cta-ink:hover { background: #000; color: #F8FAFC; }
+.cta-ink:hover { background: var(--coral-dim); border-color: var(--coral-dim); }
 .cta-ink:active { transform: translateY(1px); }
-.dark .cta-ink:hover { background: #FFFFFF; color: #0f172a; }
 
+/* Stamps: identical shape to the .eyebrow class used elsewhere on
+   demo-agents — uppercase mono micro-caption. */
 .poa-stamp {
-  color: var(--poa-sepia);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 10.5px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
 }
 
+/* Cards: match the .surface class used by the adjudication demos —
+   --surface background, --border rule, 14px radius. */
 .poa-shell .poa-playground {
-  background: #FFFFFF;
-  border: 1px solid var(--poa-rule);
-  box-shadow: 0 1px 0 rgba(20, 17, 13, 0.04);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
-.dark .poa-shell .poa-playground {
-  background: #000000;
-  border-color: rgba(245, 237, 224, 0.14);
-  box-shadow: 0 1px 0 rgba(245, 237, 224, 0.04);
+
+/* Inside .poa-shell, the serif demo titles should pick up the
+   Fraunces stack the rest of the site uses, not generic serif. */
+.poa-shell h1,
+.poa-shell h2,
+.poa-shell h3 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}
+
+/* The dot-grid background from the demo-agents body is hidden by
+   .poa-shell's background. Re-expose it so the demos read as part
+   of the same site, not a light island inside it. */
+.poa-shell {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0;
 }
