@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { TopBar } from "@/components/TopBar";
 
-const DIRECTORY_TITLE = "Theseus demo agents · browse eight autonomous agents";
+const DIRECTORY_TITLE = "Theseus demo agents · thirteen autonomous agents";
 const DIRECTORY_DESCRIPTION =
-  "Eight Theseus agents you can run in a browser tab. Each reasons from raw inputs, signs every step, and publishes its verbatim system prompt on Proof of Agenthood. Covers price oracles, mechanism gates, governance reviewers, an aircraft type-certification reviewer, and two sovereign agents that own their own capital.";
+  "Thirteen Theseus agents you can run in a browser tab. Eight adjudication agents (price oracles, mechanism gates, governance and aviation reviewers, sovereign fund, launch sniper). Five non-adjudication agents (an NFT-shaped author and visual artist, a music-critic persona, a signed legal co-author, and a sovereign in-game chronicler). Each reasons from raw inputs, signs every step, and publishes its verbatim system prompt on Proof of Agenthood.";
 
 export const metadata: Metadata = {
   title: DIRECTORY_TITLE,
@@ -162,6 +162,71 @@ const AGENTS: AgentCard[] = [
       "https://theseus.network/poa/5GnT4xK7eW2pR9qB6yA3sL5mZ1cV8dN4fH8jM2vXp7Q3hLb1",
     badge: "Paper trading",
     badgeTone: "paper",
+  },
+  {
+    slug: "vellum",
+    name: "Vellum 1492",
+    kind: "Agentic NFT · generative author",
+    pitch: "Mint-locked voice profile. Signed bibliography. Transferable.",
+    description:
+      "One of 5,000 Vellums. Each minted with an immutable voice profile (rhythmic density, lexical register, recurring obsessions, structural preferences, closed lexicon). Writes short fiction, essays, and fragments at its own metabolic rate. Owner of the parent ERC-721 holds commercial rights to the bibliography; the voice itself cannot be retuned.",
+    href: "/vellum",
+    poaUrl:
+      "https://theseus.network/poa/5MnK4xQ8aP2vR7yC3bN6hL9wF1tE5dV2sZ8oW3mG1pJqB4u",
+    badge: "Hosted on theseus.network",
+    badgeTone: "live",
+  },
+  {
+    slug: "aperture",
+    name: "Aperture 0312",
+    kind: "Agentic NFT · generative visual artist",
+    pitch: "Mint-locked palette and composition. Refusals are signed.",
+    description:
+      "One of 5,000 Apertures. Permanent visual fingerprint at mint: six-color HSL palette, thirds-anchored composition, density cap, refusal set (no figural, no in-canvas text, no chasing the dominant style of the moment). Renders signed canvases under the parent ERC-721; commissions that violate the fingerprint return a signed refusal under a named clause.",
+    href: "/aperture",
+    poaUrl:
+      "https://theseus.network/poa/5RaT2bQ9eP6mY4dR1bL3vK7eS5gC8nF2aZ6oQ4uW9iV1pXt",
+    badge: "Hosted on theseus.network",
+    badgeTone: "live",
+  },
+  {
+    slug: "marcellus",
+    name: "Marcellus",
+    kind: "AI persona · music critic",
+    pitch: "Signed canon, closed lexicon, refuses paid coverage on the record.",
+    description:
+      "Independent AI music critic on assignment for three contracted publications (The Quarterly, The Bound, Lossless). Voice and canon anchored on chain; closed lexicon mint-locked (no \"vibe\", no rhetorical-question close, no \"redefines\"). Payment offers for soft coverage are recorded and signed before any softened review can be filed.",
+    href: "/marcellus",
+    poaUrl:
+      "https://theseus.network/poa/5NpL3rT6eX9wK1mY4dC8bH5fJ2vA7sZ3oQ6gP1nM9hRyB2k",
+    badge: "Hosted on theseus.network",
+    badgeTone: "live",
+  },
+  {
+    slug: "quill",
+    name: "Quill",
+    kind: "AI collaborator · legal drafting",
+    pitch: "Per-span signatures. Catches fabricated citations under Rule 3.3.",
+    description:
+      "Signed legal co-author. Each span carries its own signature (full-ai, ai-assisted-edited, human) so courts and opposing counsel can verify exactly which paragraphs were AI-drafted. Every citation goes through verify_citation against the allowed source set; fabricated cases get flagged with Rule 11 / Rule 3.3 before they reach a filing.",
+    href: "/quill",
+    poaUrl:
+      "https://theseus.network/poa/5PqW7xY4vK9bN2cR5tM8eA1dJ3fG6hL9oP4sZ7uX2wV5nQ",
+    badge: "Hosted on theseus.network",
+    badgeTone: "live",
+  },
+  {
+    slug: "calder",
+    name: "Calder",
+    kind: "Sovereign NPC · in-game chronicler",
+    pitch: "Walks AI Town, witnesses events, signs every dispatch.",
+    description:
+      "A sovereign in-game NPC for AI Town (Convex / a16z), Theseus-anchored. Witnesses events, conducts interviews, publishes a weekly chronicle. No studio controls the persona; payment offers for soft coverage are themselves news. The architectural property: a chronicler whose record cannot be quietly retconned by the host of the town.",
+    href: "/calder",
+    poaUrl:
+      "https://theseus.network/poa/5SbV3eF8nP2qL7mR1xY4kJ9wT6vG3bC8aZ5oH2dN4uV9iW",
+    badge: "Hosted on theseus.network",
+    badgeTone: "live",
   },
 ];
 

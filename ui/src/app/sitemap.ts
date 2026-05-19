@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const BASE_URL = "https://demo-agents.theseus.network";
-const LAST_MODIFIED = "2026-05-11";
+const LAST_MODIFIED = "2026-05-19";
 
 const ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/", priority: 1.0 },
@@ -13,6 +13,11 @@ const ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/aviation", priority: 0.9 },
   { path: "/fund", priority: 0.9 },
   { path: "/launch-sniper", priority: 0.85 },
+  { path: "/vellum", priority: 0.85 },
+  { path: "/aperture", priority: 0.85 },
+  { path: "/marcellus", priority: 0.85 },
+  { path: "/quill", priority: 0.85 },
+  { path: "/calder", priority: 0.85 },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

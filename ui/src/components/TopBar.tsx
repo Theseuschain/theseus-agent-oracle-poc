@@ -66,6 +66,16 @@ export function TopBar({ mode }: Props) {
               shortLabel="Sniper"
               pathname={pathname}
             />
+            <Tab href="/vellum" label="Vellum 1492" shortLabel="Vellum" pathname={pathname} />
+            <Tab
+              href="/aperture"
+              label="Aperture 0312"
+              shortLabel="Aperture"
+              pathname={pathname}
+            />
+            <Tab href="/marcellus" label="Marcellus" pathname={pathname} />
+            <Tab href="/quill" label="Quill" pathname={pathname} />
+            <Tab href="/calder" label="Calder" pathname={pathname} />
           </nav>
         </div>
         <div className="flex items-center gap-4">
