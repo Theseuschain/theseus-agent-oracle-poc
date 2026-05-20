@@ -422,11 +422,11 @@ export default function HomePage() {
             />
           )}
 
-          <div className="mt-8">
-            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+          <div className="mt-10">
+            <p className="mb-2 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
               what the agent sees
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="border-t border-border">
               {(["coinbase", "binance", "uniswap"] as const).map((v) => {
                 const reading = venues.find((r) => r.venue === v) ?? null;
                 return (
