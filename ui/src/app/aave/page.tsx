@@ -374,154 +374,103 @@ export default function HomePage() {
       <AaveOracleJsonLd />
       <TopBar mode={mode} />
       <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
-        <Header />
-
-        <div className="mb-4">
-          <FeedPanel feed={feed} loading={!feed || venuesStillLoading} />
-        </div>
-
-        {mode === "mock" && (
-          <ScenarioControls
-            haltedVenues={
-              (Object.keys(scenario.halted) as VenueReading["venue"][]).filter(
-                (v) => scenario.halted[v],
-              )
-            }
-            anyOverride={
-              Object.values(scenario.overrides).some((v) => v !== undefined) ||
-              Object.values(scenario.depthMultipliers).some((v) => v !== undefined)
-            }
-            agentPending={scenario.pending}
-            onPumpAll={handlePumpAll}
-            onHaltToggle={handleHaltToggle}
-            onResetAll={handleReset}
-            onBlackSwan={handleBlackSwan}
-          />
-        )}
-
-        <div className="mb-2">
-          <div className="eyebrow mb-2">Real venue readings</div>
-          <p className="text-xs text-fg-mute mb-3">
-            What the agent sees right now, fetched from the public APIs of each
-            venue. Use the per-card Tamper button to override one venue while
-            leaving the others untouched.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(["coinbase", "binance", "uniswap"] as const).map((v) => {
-              const reading = venues.find((r) => r.venue === v) ?? null;
-              return (
-                <VenueCard
-                  key={v}
-                  reading={reading ?? { venue: v, priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0 }}
-                  onTamper={(price) => handleTamper(v, price)}
-                  onReset={handleReset}
-                  loading={!reading}
-                />
-              );
-            })}
+        <div className="mx-auto max-w-[760px] pt-12">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
+            <a
+              href="/"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              ← directory
+            </a>
+            <a
+              href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              on chain ↗
+            </a>
           </div>
-        </div>
 
-        <div className="mt-4 mb-4">
-          <div className="eyebrow mb-2">Agent decisions</div>
-          <DecisionTimeline
-            entries={timeline}
-            loading={!timeline.length && (mode === "live" || venuesStillLoading)}
-          />
-        </div>
-
-        <div className="mb-4 mt-6">
-          <div className="eyebrow mb-2">Aave position (the protocol the oracle prices for)</div>
-          <p className="text-xs text-fg-mute mb-3">
-            When the agent refuses, the borrow path on this position reverts. The
-            user keeps their tokens; the protocol doesn&rsquo;t open a position
-            against a price the agent never confirmed.
+          <p className="mb-12 text-[13.5px] leading-[1.7] text-fg-mute">
+            The Theseus Agent Oracle is an AI agent that prices ETH/USD by
+            reasoning across three venues instead of taking a median. Try a
+            manipulation below — watch it refuse where a quorum oracle would
+            have priced.
           </p>
-          <PositionPanel
-            position={position}
-            feedRefused={refused && !venuesStillLoading}
-            onAction={handleAction}
-          />
-        </div>
 
-        <Footer />
+          <div className="mb-6">
+            <FeedPanel feed={feed} loading={!feed || venuesStillLoading} />
+          </div>
+
+          {mode === "mock" && (
+            <ScenarioControls
+              haltedVenues={
+                (Object.keys(scenario.halted) as VenueReading["venue"][]).filter(
+                  (v) => scenario.halted[v],
+                )
+              }
+              anyOverride={
+                Object.values(scenario.overrides).some((v) => v !== undefined) ||
+                Object.values(scenario.depthMultipliers).some((v) => v !== undefined)
+              }
+              agentPending={scenario.pending}
+              onPumpAll={handlePumpAll}
+              onHaltToggle={handleHaltToggle}
+              onResetAll={handleReset}
+              onBlackSwan={handleBlackSwan}
+            />
+          )}
+
+          <div className="mt-8">
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              what the agent sees
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(["coinbase", "binance", "uniswap"] as const).map((v) => {
+                const reading = venues.find((r) => r.venue === v) ?? null;
+                return (
+                  <VenueCard
+                    key={v}
+                    reading={reading ?? { venue: v, priceUsd: 0, depthUsd: 0, ok: false, ageSeconds: 0 }}
+                    onTamper={(price) => handleTamper(v, price)}
+                    onReset={handleReset}
+                    loading={!reading}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              recent decisions
+            </p>
+            <DecisionTimeline
+              entries={timeline}
+              loading={!timeline.length && (mode === "live" || venuesStillLoading)}
+            />
+          </div>
+
+          <details className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <summary className="cursor-pointer text-[10.5px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg">
+              the protocol this oracle prices for ↓
+            </summary>
+            <p className="mt-3 text-[12px] leading-relaxed text-fg-mute">
+              When the agent refuses, the borrow path on this Aave position
+              reverts. The user keeps their tokens; the protocol does not open
+              a position against a price the agent never confirmed.
+            </p>
+            <div className="mt-4">
+              <PositionPanel
+                position={position}
+                feedRefused={refused && !venuesStillLoading}
+                onAction={handleAction}
+              />
+            </div>
+          </details>
         </div>
       </main>
     </>
-  );
-}
-
-function Header() {
-  return (
-    <header className="mb-6 sm:mb-8 md:mb-10">
-      <div className="eyebrow mb-2">Live demo</div>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-        <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight">
-          Theseus Agent Oracle
-        </h1>
-        <a
-          href="https://theseus.network/poa/5GjXyA2tF8oP4qN7pK3sL9mZ8r5yA1cB6dV2eW4nT8fH7sB1"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-[8px] border border-coral/40 bg-coral/5 text-coral hover:bg-coral/10 transition"
-        >
-          Agent&apos;s PoA profile ↗
-        </a>
-      </div>
-      <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
-        Try a venue manipulation. Watch the agent refuse where a quorum
-        oracle would have priced.
-      </p>
-      <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
-        <li>
-          <span className="text-coral mr-1">1.</span>pick a manipulation
-        </li>
-        <li>
-          <span className="text-coral mr-1">2.</span>watch the agent reason and decide
-        </li>
-        <li>
-          <span className="text-coral mr-1">3.</span>compare against the venue-quorum oracle
-        </li>
-      </ol>
-    </header>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="mt-16 pt-8 border-t border-border text-fg-dim text-xs leading-relaxed">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <div className="eyebrow mb-2">How it works</div>
-          The agent runs every 10 blocks (~60s). It reads the three venues,
-          reconciles them, and writes the result to{" "}
-          <span className="mono text-fg">AgentPriceFeed.sol</span>. Refusals
-          revert with <span className="mono text-fg">PriceRefused(reasonHash)</span>,
-          which halts every Aave path that touches the price.
-        </div>
-        <div>
-          <div className="eyebrow mb-2">What to try</div>
-          Pump every venue to the same fake number. Halt one. Tamper a single
-          one from its card. Each scenario should make the agent refuse for a
-          different reason. The flash-crash preset tests the opposite: a real
-          market move the agent should accept.
-        </div>
-        <div>
-          <div className="eyebrow mb-2">Source</div>
-          <a
-            href="https://github.com/Theseuschain/theseus-agent-oracle-poc"
-            className="text-coral hover:underline mono"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Theseuschain/theseus-agent-oracle-poc
-          </a>
-          <div className="mt-2 mono text-[11px]">
-            Aave V3 fork: zero modifications. The diff is empty by design.
-          </div>
-        </div>
-      </div>
-    </footer>
   );
 }
