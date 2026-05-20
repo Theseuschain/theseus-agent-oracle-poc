@@ -1,7 +1,5 @@
 "use client";
 
-import { Gavel } from "lucide-react";
-
 interface Props {
   busy: boolean;
   pending: boolean;
@@ -12,35 +10,18 @@ export function ReviewButton({ busy, pending, onSubmit }: Props) {
   const disabled = busy || pending;
 
   return (
-    <div className="surface p-4 sm:p-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Gavel size={12} className="text-coral" />
-        <div className="eyebrow">Review this proposal</div>
-      </div>
-
-      <p className="text-xs text-fg-dim mb-3 leading-relaxed">
-        The reviewer reads the proposal, the calldata summary, and the
-        treasury and voting context, and posts an APPROVE, CAUTION, or
-        REJECT verdict before the vote opens. The verdict is advisory; the
-        DAO can still vote however it wants.
-      </p>
-
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 text-[12px]">
       <button
         type="button"
         onClick={() => onSubmit()}
-        className="btn btn-primary w-full justify-center"
         disabled={disabled}
+        className="italic underline decoration-border underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg disabled:opacity-30 disabled:hover:no-underline"
       >
-        {pending ? "agent reasoning…" : busy ? "submitting…" : "Run review"}
+        {pending ? "agent reasoning…" : busy ? "submitting…" : "run review →"}
       </button>
-
-      <div className="mt-3 text-[10px] mono text-fg-mute leading-relaxed">
-        <span className="text-green">APPROVE</span>: routine, no structural flags.{" "}
-        <span className="text-amber">CAUTION</span>: at least one signal voters
-        should weigh.{" "}
-        <span className="text-red">REJECT</span>: shape of a known governance
-        attack.
-      </div>
+      <span className="text-fg-mute">
+        approve · caution · reject. advisory only; the DAO still votes.
+      </span>
     </div>
   );
 }

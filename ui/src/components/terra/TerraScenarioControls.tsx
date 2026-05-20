@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FastForward, RotateCcw } from "lucide-react";
 import { PRESETS } from "@/lib/terra-scenario";
-import { ShareLinkButton } from "../ShareLinkButton";
 
 interface Props {
   agentPending: boolean;
@@ -23,7 +21,8 @@ export function TerraScenarioControls({
   const [busy, setBusy] = useState(false);
   const disabled = busy || agentPending;
 
-  const wrap = async (fn: () => Promise<void> | void) => {
+  const wrap = (fn: () => Promise<void> | void) => async () => {
+    if (disabled) return;
     setBusy(true);
     try {
       await fn();
@@ -33,60 +32,44 @@ export function TerraScenarioControls({
   };
 
   return (
-    <div className="surface p-4 sm:p-5 mb-4">
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div className="eyebrow">Demo levers</div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {agentPending && (
-            <span className="mono text-[10px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
-              agent reasoning…
-            </span>
-          )}
-          <ShareLinkButton disabled={disabled} />
-          <button
-            className="btn"
-            onClick={() => wrap(onReset)}
-            disabled={disabled}
-            title="Reset to healthy state"
-          >
-            <RotateCcw size={12} /> Reset
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-[10px] bg-surface-2 border border-border p-4">
-        <div className="eyebrow mb-2">Step through Terra: May 8–12, 2022</div>
-        <p className="text-xs text-fg-dim leading-relaxed mb-3">
-          Each preset puts the vault in a state that matches a day of the actual
-          Terra/Luna collapse. After loading a preset, try Mint or Redeem and
-          watch the failsafe agent reason and decide.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-          {ORDER.map((key) => {
-            const p = PRESETS[key];
-            const active = presetLabel === p.label;
-            return (
-              <button
-                key={key}
-                className={`rounded-[8px] border transition px-3 py-2.5 text-left disabled:opacity-50 disabled:cursor-not-allowed ${
-                  active
-                    ? "bg-coral/10 border-coral text-fg"
-                    : "bg-bg border-border hover:border-coral text-fg"
-                }`}
-                onClick={() => wrap(() => onPreset(key))}
-                disabled={disabled}
-              >
-                <div className="flex items-center gap-1.5 mono text-[11px] uppercase tracking-wider">
-                  <FastForward size={11} /> {p.label}
-                </div>
-                <div className="mono text-[10px] text-fg-mute mt-0.5 leading-snug">
-                  {p.description.split(".")[0]}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div className="mt-6 flex flex-wrap items-baseline gap-x-4 gap-y-2 text-[12px]">
+      <span className="text-fg-mute">load vault state:</span>
+      {ORDER.map((key, i) => {
+        const p = PRESETS[key];
+        const active = presetLabel === p.label;
+        return (
+          <span key={key}>
+            <button
+              type="button"
+              onClick={wrap(() => onPreset(key))}
+              disabled={disabled}
+              className="italic underline decoration-border underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg disabled:opacity-30 disabled:hover:no-underline"
+              style={{ color: active ? "var(--fg)" : undefined }}
+            >
+              {p.label.toLowerCase()}
+            </button>
+            {i < ORDER.length - 1 && (
+              <span className="ml-4 text-border">·</span>
+            )}
+          </span>
+        );
+      })}
+      <button
+        type="button"
+        onClick={wrap(onReset)}
+        disabled={disabled}
+        className="ml-auto text-fg-mute transition-colors hover:text-fg hover:underline disabled:opacity-30"
+      >
+        reset →
+      </button>
+      {agentPending && (
+        <span
+          className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+          style={{ color: "var(--coral)" }}
+        >
+          agent reasoning…
+        </span>
+      )}
     </div>
   );
 }

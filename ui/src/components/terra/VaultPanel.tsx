@@ -17,18 +17,19 @@ export function VaultPanel({ vault, presetLabel }: Props) {
   const reserveHealth = healthLevel(0.4 - vault.reserveCoverage, [0.0, 0.2]); // inverted
 
   return (
-    <div className="surface p-4 sm:p-6 lg:col-span-2">
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div>
-          <div className="eyebrow mb-1">USTD vault</div>
-          <div className="serif text-2xl">Algorithmic stablecoin</div>
-        </div>
-        <span className="badge badge-stale">{presetLabel}</span>
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+          USTD vault · algorithmic stablecoin
+        </p>
+        <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+          {presetLabel}
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-y-4 gap-x-6 mb-5">
+      <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
         <BigStat
-          label="Peg"
+          label="peg"
           value={`$${vault.ustdMedianUsd.toFixed(3)}`}
           sub={`${pegDevBps >= 0 ? "-" : "+"}${Math.abs(pegDevBps).toFixed(0)}bps from $1`}
           health={pegHealth}
@@ -36,32 +37,32 @@ export function VaultPanel({ vault, presetLabel }: Props) {
         <BigStat
           label="LUND price"
           value={`$${vault.lundPriceUsd.toFixed(2)}`}
-          sub={`${(((vault.lundPriceChange24h - 1) * 100) | 0)}% / 24h`}
+          sub={`${signed(((vault.lundPriceChange24h - 1) * 100))}% / 24h`}
           health={priceHealth}
         />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6 text-xs">
-        <Stat
+      <div className="mt-5 border-t border-border">
+        <Row
           label="USTD circulating"
           value={`${(vault.ustdSupply / 1e9).toFixed(2)}B`}
         />
-        <Stat
+        <Row
           label="LUND circulating"
           value={`${(vault.lundSupply / 1e6).toFixed(0)}M`}
           sub={`${signed(((vault.lundSupplyGrowth24h - 1) * 100))}% / 24h`}
           health={supplyHealth}
         />
-        <Stat
-          label="Reserves"
+        <Row
+          label="reserves"
           value={`${(vault.reserveCoverage * 100).toFixed(1)}%`}
           sub="of USTD supply"
           health={reserveHealth}
         />
-        <Stat
-          label="Redemption pressure"
+        <Row
+          label="redemption pressure"
           value={`${(vault.redemptionRate1h * 100).toFixed(2)}%/h`}
-          sub={`= ${formatUsd((vault.redemptionRate1h * vault.ustdSupply))} / hour`}
+          sub={`${formatUsd((vault.redemptionRate1h * vault.ustdSupply))} / hour`}
           health={redemptionHealth}
         />
       </div>
@@ -78,9 +79,9 @@ function healthLevel(value: number, [warn, crit]: [number, number]): Health {
 }
 
 function healthColor(h?: Health): string {
-  if (h === "crit") return "text-red";
-  if (h === "warn") return "text-amber";
-  return "text-green";
+  if (h === "crit") return "var(--coral)";
+  if (h === "warn") return "var(--coral)";
+  return "var(--fg-mute)";
 }
 
 function signed(n: number): string {
@@ -100,14 +101,26 @@ function BigStat({
 }) {
   return (
     <div>
-      <div className="eyebrow mb-1">{label}</div>
-      <div className="serif text-3xl tnum">{value}</div>
-      <div className={`mono text-[11px] mt-0.5 ${healthColor(health)}`}>{sub}</div>
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+        {label}
+      </p>
+      <p
+        className="serif text-3xl tnum tracking-tight"
+        style={{ color: health === "crit" ? "var(--coral)" : "var(--fg)" }}
+      >
+        {value}
+      </p>
+      <p
+        className="font-mono text-[10.5px] tnum"
+        style={{ color: healthColor(health) }}
+      >
+        {sub}
+      </p>
     </div>
   );
 }
 
-function Stat({
+function Row({
   label,
   value,
   sub,
@@ -119,14 +132,19 @@ function Stat({
   health?: Health;
 }) {
   return (
-    <div>
-      <div className="eyebrow mb-0.5">{label}</div>
-      <div className="mono text-sm tnum text-fg">{value}</div>
-      {sub && (
-        <div className={`mono text-[10px] ${healthColor(health) || "text-fg-mute"}`}>
-          {sub}
-        </div>
-      )}
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-2 last:border-b-0 text-[12px]">
+      <span className="font-mono text-fg-mute">{label}</span>
+      <span className="flex items-baseline gap-3">
+        <span className="font-mono tnum text-fg">{value}</span>
+        {sub && (
+          <span
+            className="font-mono text-[10.5px] tnum"
+            style={{ color: healthColor(health) }}
+          >
+            {sub}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

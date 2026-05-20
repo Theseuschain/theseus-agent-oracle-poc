@@ -7,7 +7,6 @@ import { WithdrawForm } from "@/components/bridge/WithdrawForm";
 import { BridgeScenarioControls } from "@/components/bridge/BridgeScenarioControls";
 import { BridgeTimeline } from "@/components/bridge/BridgeTimeline";
 import { BridgeGuardianJsonLd } from "@/components/JsonLd";
-import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   BridgeAgentVerdict,
   BridgeScenarioState,
@@ -166,16 +165,30 @@ export default function BridgePage() {
       <BridgeGuardianJsonLd />
       <TopBar mode="mock" />
       <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
-          <header className="mb-6 sm:mb-8 md:mb-10">
-            <div className="eyebrow mb-2">Live demo</div>
-            <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
-              Bridge Guardian
-            </h1>
-            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
-              Presets cover the Ronin, Wormhole, and Nomad attack shapes.
-            </p>
-          </header>
+        <div className="mx-auto max-w-[760px] pt-12">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
+            <a
+              href="/"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              ← directory
+            </a>
+            <a
+              href="https://theseus.network/poa/5KbR9w3jH8mTcQ2nL5pY7eB1xK4dV6sN8aZ3fW5tH9pM1vXc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              on chain ↗
+            </a>
+          </div>
+
+          <p className="mb-12 text-[13.5px] leading-[1.7] text-fg-mute">
+            The Bridge Guardian is an AI agent that gates withdrawals on a
+            cross-chain bridge. Load a Ronin, Wormhole, or Nomad attack shape
+            below and try to release — watch it refuse where a naive bridge
+            would have paid out.
+          </p>
 
           <div id="bridge-scenarios">
             <BridgeScenarioControls
@@ -186,11 +199,14 @@ export default function BridgePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <div className="mt-10">
             <BridgePanel
               state={scenario.state}
               presetLabel={scenario.presetLabel}
             />
+          </div>
+
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
             <WithdrawForm
               busy={busy}
               pending={scenario.pending}
@@ -198,11 +214,13 @@ export default function BridgePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              guardian verdicts
+            </p>
             <BridgeTimeline entries={scenario.events} />
           </div>
         </div>
-        <CommitmentSurfaceFooter contract="bridgeGuardian" live />
       </main>
     </>
   );

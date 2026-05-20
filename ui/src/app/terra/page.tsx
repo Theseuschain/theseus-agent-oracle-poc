@@ -7,7 +7,6 @@ import { MintRedeemForm } from "@/components/terra/MintRedeemForm";
 import { TerraScenarioControls } from "@/components/terra/TerraScenarioControls";
 import { TerraTimeline } from "@/components/terra/TerraTimeline";
 import { TerraFailsafeJsonLd } from "@/components/JsonLd";
-import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   ActionKind,
   AgentVerdict,
@@ -19,7 +18,6 @@ import {
   applyPendingAction,
   applyPreset,
   initialTerraScenario,
-  setTerraPending,
   setTerraPendingReasoning,
 } from "@/lib/terra-scenario";
 import {
@@ -168,17 +166,32 @@ export default function TerraPage() {
       <TerraFailsafeJsonLd />
       <TopBar mode="mock" />
       <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
-          <Header />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-            <VaultPanel vault={scenario.vault} presetLabel={scenario.presetLabel} />
-            <MintRedeemForm
-              busy={busy}
-              pending={scenario.pending}
-              onSubmit={handleAction}
-            />
+        <div className="mx-auto max-w-[760px] pt-12">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
+            <a
+              href="/"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              ← directory
+            </a>
+            <a
+              href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              on chain ↗
+            </a>
           </div>
+
+          <p className="mb-12 text-[13.5px] leading-[1.7] text-fg-mute">
+            The Terra Failsafe Agent is an AI agent that refuses mint and
+            redeem when the algorithmic stablecoin vault is stressed. Load a
+            preset from the actual Terra/Luna collapse below, then try a mint
+            or redeem — watch it refuse where the original contract did not.
+          </p>
+
+          <VaultPanel vault={scenario.vault} presetLabel={scenario.presetLabel} />
 
           <TerraScenarioControls
             agentPending={scenario.pending}
@@ -187,68 +200,20 @@ export default function TerraPage() {
             onReset={handleReset}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <MintRedeemForm
+            busy={busy}
+            pending={scenario.pending}
+            onSubmit={handleAction}
+          />
+
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              recent decisions
+            </p>
             <TerraTimeline entries={scenario.events} pending={scenario.pending} />
           </div>
-
-          <CommitmentSurfaceFooter contract="terraFailsafe" live />
-
-          <Footer />
         </div>
       </main>
     </>
-  );
-}
-
-function Header() {
-  return (
-    <header className="mb-6 sm:mb-8 md:mb-10">
-      <div className="eyebrow mb-2">Live demo</div>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-        <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight">
-          Terra Failsafe Agent
-        </h1>
-        <a
-          href="https://theseus.network/poa/5DkY7e3sN2pQ9bX4hG8wRtL6vK1cM5fT9oP3jW7xZ2aV4hN6"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-[8px] border border-coral/40 bg-coral/5 text-coral hover:bg-coral/10 transition"
-        >
-          Agent&apos;s PoA profile ↗
-        </a>
-      </div>
-      <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
-        Load a vault state and try a mint or redeem.
-      </p>
-      <ol className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] mono uppercase tracking-wider text-fg-mute">
-        <li>
-          <span className="text-coral mr-1">1.</span>load a vault state preset
-        </li>
-        <li>
-          <span className="text-coral mr-1">2.</span>try <span className="text-fg">mint</span> or <span className="text-fg">redeem</span>
-        </li>
-        <li>
-          <span className="text-coral mr-1">3.</span>read the verdict, reasoning, and counterfactual
-        </li>
-      </ol>
-    </header>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="mt-12 pt-6 border-t border-border flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 text-[11px] mono text-fg-mute">
-      <span>
-        Vault state is simulation. Agent reasoning is real (deepseek-chat).
-      </span>
-      <a
-        href="https://github.com/Theseuschain/theseus-agent-oracle-poc"
-        className="uppercase tracking-wider text-fg-dim hover:text-fg transition"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        source ↗
-      </a>
-    </footer>
   );
 }

@@ -2,15 +2,6 @@
 
 import { useState } from "react";
 import {
-  CircleDot,
-  ArrowUpRight as ArrowUp,
-  ArrowDownRight as ArrowDown,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  ArrowUpRight,
-} from "lucide-react";
-import {
   FundTimelineEntry,
   navUsd,
   usdcWeight,
@@ -25,32 +16,20 @@ const POA_PROFILE =
   "https://theseus.network/poa/5LkY9d2vH6mR8nQ1bX3cP5tF7eK4aV2sZ8wM5oG1pJqC";
 
 export function FundTimeline({ entries }: Props) {
+  if (entries.length === 0) {
+    return (
+      <p className="text-[12px] text-fg-mute">
+        Load a market above and run a tick. The agent&apos;s decision,
+        reasoning, and portfolio change will appear here.
+      </p>
+    );
+  }
   return (
-    <div className="surface p-4 sm:p-6 lg:col-span-3">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <div className="eyebrow mb-1">Fund decisions</div>
-          <div className="serif text-lg">Tick timeline</div>
-        </div>
-        <span className="text-fg-mute mono text-[10px]">
-          {entries.length} tick{entries.length === 1 ? "" : "s"}
-        </span>
-      </div>
-
-      {entries.length === 0 ? (
-        <div className="text-fg-dim text-sm py-8 text-center max-w-md mx-auto leading-relaxed">
-          Load a market state above and click{" "}
-          <span className="text-fg">Run tick</span>. The agent&apos;s
-          decision, reasoning, and the portfolio change will land here.
-        </div>
-      ) : (
-        <ol className="divide-y divide-border">
-          {entries.map((e, i) => (
-            <Row key={`${e.block}-${i}`} entry={e} />
-          ))}
-        </ol>
-      )}
-    </div>
+    <ol>
+      {entries.map((e, i) => (
+        <Row key={`${e.block}-${i}`} entry={e} />
+      ))}
+    </ol>
   );
 }
 
@@ -78,18 +57,10 @@ function reasoningOneLiner(reasoning: string): string | undefined {
   return parts.join(" ");
 }
 
-function actionPalette(a?: "HOLD" | "BUY_WETH" | "SELL_WETH"): {
-  icon: typeof CircleDot;
-  color: string;
-  label: string;
-} {
-  if (a === "BUY_WETH") {
-    return { icon: ArrowUp, color: "text-green", label: "buy weth" };
-  }
-  if (a === "SELL_WETH") {
-    return { icon: ArrowDown, color: "text-amber", label: "sell weth" };
-  }
-  return { icon: CircleDot, color: "text-fg-mute", label: "hold" };
+function actionLabel(a?: "HOLD" | "BUY_WETH" | "SELL_WETH"): string {
+  if (a === "BUY_WETH") return "buy weth";
+  if (a === "SELL_WETH") return "sell weth";
+  return "hold";
 }
 
 function Row({ entry }: { entry: FundTimelineEntry }) {
@@ -97,8 +68,10 @@ function Row({ entry }: { entry: FundTimelineEntry }) {
   const [inspectOpen, setInspectOpen] = useState(false);
 
   const isPending = !!entry.pending || !entry.decision;
-  const palette = actionPalette(entry.decision?.action);
-  const Icon = palette.icon;
+  const action = entry.decision?.action;
+  const label = actionLabel(action);
+  const isRefused = false;
+  const isAction = action === "BUY_WETH" || action === "SELL_WETH";
 
   const reasoningText =
     entry.streamingReasoning ?? entry.decision?.reasoning ?? "";
@@ -122,179 +95,169 @@ function Row({ entry }: { entry: FundTimelineEntry }) {
   const navBefore = navUsd(before, price);
   const navAfter = after ? navUsd(after, price) : undefined;
 
+  const hasReasoning = !isPending && !!entry.decision?.reasoning;
+  const hasInspect = !isPending && !!entry.decision?.prompt;
+
   return (
-    <li className="py-3">
-      <div className="flex items-start gap-3">
-        <div className="pt-0.5">
-          {isPending ? (
-            <Loader2 size={14} className="text-coral animate-spin" />
-          ) : (
-            <Icon size={14} className={palette.color} />
+    <li className="border-b border-border py-4 last:border-b-0">
+      <div className="flex items-baseline gap-3 text-[12px]">
+        <span className="font-mono text-fg-mute">
+          block {entry.block.toLocaleString()}
+        </span>
+        {isPending ? (
+          <span
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+            style={{ color: "var(--coral)" }}
+          >
+            reasoning…
+          </span>
+        ) : (
+          <span
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+            style={{
+              color: isAction ? "var(--coral)" : "var(--fg)",
+            }}
+          >
+            {label}
+          </span>
+        )}
+        {entry.decision && entry.decision.sizeUsd > 0 && (
+          <span className="font-mono tnum text-fg">
+            ${entry.decision.sizeUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </span>
+        )}
+        {entry.scenarioLabel && (
+          <span className="font-mono text-[10.5px] text-fg-mute">
+            · {entry.scenarioLabel}
+          </span>
+        )}
+      </div>
+
+      {entry.decision && (
+        <p className="mt-1 font-mono text-[12px] text-fg-mute break-words">
+          {entry.decision.reason}
+        </p>
+      )}
+
+      {isPending && !entry.streamingReasoning && (
+        <p className="mt-1 text-[12px] italic text-fg-mute">
+          The agent is reading market state and its current portfolio…
+        </p>
+      )}
+      {(isPending || stillTyping) && typedReasoning && (
+        <p className="mt-1 text-[12.5px] italic text-fg-mute">
+          {typedReasoning}
+          {!typewriterCaughtUp && (
+            <span
+              className="ml-0.5 inline-block h-[1em] w-[6px] animate-pulse align-text-bottom"
+              style={{ background: "var(--coral)" }}
+            />
           )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="mono text-[11px] text-fg-mute">
-              block {entry.block.toLocaleString()}
-            </span>
-            {isPending ? (
-              <span className="mono text-[11px] text-coral pulse-coral rounded-full px-2 py-0.5 border border-coral/40">
-                agent reasoning…
-              </span>
-            ) : (
-              <span
-                className={`mono text-[11px] uppercase tracking-wider ${palette.color}`}
-              >
-                {palette.label}
-              </span>
-            )}
-            {entry.decision && entry.decision.sizeUsd > 0 && (
-              <span className="mono text-[11px] text-fg">
-                ${entry.decision.sizeUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-            )}
-            {entry.scenarioLabel && (
-              <span className="mono text-[10px] text-fg-mute">
-                · {entry.scenarioLabel}
-              </span>
-            )}
-          </div>
-          {entry.decision && (
-            <div className="mono text-sm text-fg-dim mt-0.5 break-words">
-              {entry.decision.reason}
-            </div>
-          )}
-          {isPending && !entry.streamingReasoning && (
-            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-mute italic">
-              The agent is reading market state and its current portfolio…
-            </div>
-          )}
-          {(isPending || stillTyping) && typedReasoning && (
-            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim">
-              <span className="italic">{typedReasoning}</span>
-              {!typewriterCaughtUp && (
-                <span className="ml-0.5 inline-block w-[6px] h-[1em] bg-coral align-text-bottom animate-pulse" />
-              )}
-            </div>
-          )}
-          {!isPending && !stillTyping && oneLiner && (
-            <div className="mt-1.5 text-[12px] leading-relaxed text-fg-dim italic">
-              &ldquo;{oneLiner}&rdquo;
-            </div>
-          )}
-          {after && usdcPctAfter && navAfter !== undefined && (
-            <div className="mt-2 rounded-[8px] border border-border bg-surface-2 p-3 text-[11px] leading-relaxed text-fg-dim">
-              <span className="mono text-fg-mute">portfolio:</span>{" "}
-              <span className="mono">{usdcPctBefore}% USDC</span>
-              {usdcPctBefore !== usdcPctAfter && (
-                <>
-                  {" "}
-                  <span className="text-fg-mute">→</span>{" "}
-                  <span className="mono text-fg">{usdcPctAfter}% USDC</span>
-                </>
-              )}
-              {" · "}
-              <span className="mono text-fg-mute">NAV:</span>{" "}
-              <span className="mono">
-                ${navBefore.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              {Math.abs(navAfter - navBefore) > 0.01 && (
-                <>
-                  {" "}
-                  <span className="text-fg-mute">→</span>{" "}
-                  <span className="mono text-fg">
-                    ${navAfter.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-          {entry.decision && (
+        </p>
+      )}
+      {!isPending && !stillTyping && oneLiner && (
+        <p className="mt-1 text-[12.5px] italic text-fg-mute">
+          &ldquo;{oneLiner}&rdquo;
+        </p>
+      )}
+
+      {after && usdcPctAfter && navAfter !== undefined && (
+        <p className="mt-2 font-mono text-[11px] text-fg-mute">
+          portfolio: <span className="tnum">{usdcPctBefore}% USDC</span>
+          {usdcPctBefore !== usdcPctAfter && (
             <>
-              <p className="mt-2 text-[11px] leading-relaxed text-fg-dim">
-                On Theseus, this tick&rsquo;s reasoning and the resulting
-                portfolio change are signed and verifiable. No human
-                approved it;{" "}
-                <a
-                  href={POA_PROFILE}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-coral hover:underline"
-                >
-                  check the proof
-                </a>
-                .
-              </p>
-              <div className="flex items-baseline gap-3 mt-2 flex-wrap">
-                <button
-                  className="mono text-[10px] text-coral hover:underline flex items-center gap-1"
-                  onClick={() => setReasoningOpen((o) => !o)}
-                >
-                  {reasoningOpen ? (
-                    <ChevronDown size={10} />
-                  ) : (
-                    <ChevronRight size={10} />
-                  )}
-                  full reasoning
-                </button>
-                {entry.decision.prompt && (
-                  <button
-                    className="mono text-[10px] text-fg-dim hover:text-fg flex items-center gap-1"
-                    onClick={() => setInspectOpen((o) => !o)}
-                  >
-                    {inspectOpen ? (
-                      <ChevronDown size={10} />
-                    ) : (
-                      <ChevronRight size={10} />
-                    )}
-                    inspect input/output
-                  </button>
-                )}
-                <button
-                  className="mono text-[10px] text-fg-dim hover:text-coral flex items-center gap-1 ml-auto"
-                  onClick={() => {
-                    const el = document.getElementById("fund-scenarios");
-                    if (el) {
-                      el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    } else {
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                >
-                  try another market <ArrowUpRight size={10} />
-                </button>
-              </div>
+              {" → "}
+              <span className="tnum text-fg">{usdcPctAfter}% USDC</span>
             </>
           )}
-          {reasoningOpen && entry.decision && (
-            <div className="mt-2 p-3 rounded-[8px] bg-surface-2 border border-border text-xs leading-relaxed text-fg-dim whitespace-pre-wrap break-words">
-              {entry.decision.reasoning}
-            </div>
+          {" · NAV "}
+          <span className="tnum">
+            ${navBefore.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </span>
+          {Math.abs(navAfter - navBefore) > 0.01 && (
+            <>
+              {" → "}
+              <span className="tnum text-fg">
+                ${navAfter.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+            </>
           )}
-          {inspectOpen && entry.decision?.prompt && (
-            <div className="mt-2 grid grid-cols-1 gap-2">
-              <details className="p-3 rounded-[8px] bg-surface-2 border border-border">
-                <summary className="mono text-[10px] uppercase tracking-wider text-fg-mute cursor-pointer">
-                  user message sent to model
-                </summary>
-                <pre className="mt-2 text-[11px] whitespace-pre-wrap text-fg-dim">
-                  {entry.decision.prompt.user}
-                </pre>
-              </details>
-              {entry.decision.rawResponse && (
-                <details className="p-3 rounded-[8px] bg-surface-2 border border-border">
-                  <summary className="mono text-[10px] uppercase tracking-wider text-fg-mute cursor-pointer">
-                    raw model response
-                  </summary>
-                  <pre className="mt-2 text-[11px] whitespace-pre-wrap text-fg-dim">
-                    {entry.decision.rawResponse}
-                  </pre>
-                </details>
-              )}
-            </div>
+        </p>
+      )}
+
+      {!isPending && entry.decision && (
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-[10.5px] text-fg-mute">
+          <a
+            href={POA_PROFILE}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-fg hover:underline"
+          >
+            check the proof ↗
+          </a>
+          {hasReasoning && (
+            <button
+              type="button"
+              onClick={() => setReasoningOpen((o) => !o)}
+              className="transition-colors hover:text-fg hover:underline"
+            >
+              {reasoningOpen ? "hide" : "full"} reasoning
+            </button>
+          )}
+          {hasInspect && (
+            <button
+              type="button"
+              onClick={() => setInspectOpen((o) => !o)}
+              className="transition-colors hover:text-fg hover:underline"
+            >
+              {inspectOpen ? "hide" : "inspect"} input/output
+            </button>
+          )}
+          {!isRefused && (
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("fund-scenarios");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                } else {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="ml-auto transition-colors hover:text-fg hover:underline"
+            >
+              try another market ↑
+            </button>
           )}
         </div>
-      </div>
+      )}
+
+      {reasoningOpen && entry.decision && (
+        <p className="mt-3 whitespace-pre-wrap text-[12.5px] leading-relaxed text-fg-mute">
+          {entry.decision.reasoning}
+        </p>
+      )}
+
+      {inspectOpen && entry.decision?.prompt && (
+        <div className="mt-3 border-l-2 border-border pl-4 font-mono text-[10.5px] text-fg-mute">
+          <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+            user message sent to model
+          </p>
+          <pre className="mt-2 whitespace-pre-wrap break-words text-[10px] leading-snug">
+            {entry.decision.prompt.user}
+          </pre>
+          {entry.decision.rawResponse && (
+            <>
+              <p className="mt-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+                raw model response
+              </p>
+              <pre className="mt-2 max-h-96 overflow-x-auto whitespace-pre-wrap break-all text-[10px] leading-snug">
+                {entry.decision.rawResponse}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
     </li>
   );
 }

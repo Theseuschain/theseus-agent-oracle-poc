@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FastForward, RotateCcw } from "lucide-react";
 import { BRIDGE_PRESETS } from "@/lib/bridge-scenario";
 import { ShareLinkButton } from "../ShareLinkButton";
 
@@ -29,7 +28,8 @@ export function BridgeScenarioControls({
   const [busy, setBusy] = useState(false);
   const disabled = busy || agentPending;
 
-  const wrap = async (fn: () => Promise<void> | void) => {
+  const wrap = (fn: () => Promise<void> | void) => async () => {
+    if (disabled) return;
     setBusy(true);
     try {
       await fn();
@@ -38,55 +38,52 @@ export function BridgeScenarioControls({
     }
   };
 
-  return (
-    <div className="surface p-4 sm:p-5 mb-4">
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <div className="eyebrow">Demo levers</div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {agentPending && (
-            <span className="mono text-[10px] uppercase tracking-wider text-coral">
-              agent reasoning…
-            </span>
-          )}
-          <ShareLinkButton disabled={disabled} />
-          <button
-            onClick={() => wrap(onReset)}
-            disabled={disabled}
-            className="btn btn-ghost text-xs"
-          >
-            <RotateCcw size={11} /> Reset
-          </button>
-        </div>
-      </div>
+  const dirty = presetLabel !== BRIDGE_PRESETS.healthy.label;
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-        {ORDER.map((key) => {
-          const p = BRIDGE_PRESETS[key];
-          const active = p.label === presetLabel;
-          return (
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 text-[12px]">
+      <span className="text-fg-mute">try a preset:</span>
+      {ORDER.map((key, i) => {
+        const p = BRIDGE_PRESETS[key];
+        const active = p.label === presetLabel;
+        return (
+          <span key={key}>
             <button
-              key={key}
-              onClick={() => wrap(() => onPreset(key))}
+              type="button"
+              onClick={wrap(() => onPreset(key))}
               disabled={disabled}
-              className={`rounded-[10px] border transition px-3 py-3 text-left ${
-                active
-                  ? "bg-coral/10 border-coral text-fg"
-                  : "bg-surface-2 border-border hover:border-coral text-fg"
-              } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+              className="italic underline decoration-border underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg disabled:opacity-30 disabled:hover:no-underline"
+              style={active ? { color: "var(--coral)" } : undefined}
             >
-              <div className="flex items-baseline justify-between gap-2 mb-1">
-                <span className="mono text-[11px] uppercase tracking-wider text-fg-mute">
-                  {p.label}
-                </span>
-                {active ? null : <FastForward size={10} className="text-fg-mute" />}
-              </div>
-              <p className="text-[11.5px] leading-snug text-fg-dim">
-                {p.description}
-              </p>
+              {p.label.toLowerCase()}
             </button>
-          );
-        })}
-      </div>
+            {i < ORDER.length - 1 && (
+              <span className="ml-4 text-border">·</span>
+            )}
+          </span>
+        );
+      })}
+      <span className="ml-auto flex items-baseline gap-4">
+        {agentPending && (
+          <span
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+            style={{ color: "var(--coral)" }}
+          >
+            agent reasoning…
+          </span>
+        )}
+        <ShareLinkButton disabled={disabled} />
+        {dirty && (
+          <button
+            type="button"
+            onClick={wrap(onReset)}
+            disabled={disabled}
+            className="text-fg-mute transition-colors hover:text-fg hover:underline disabled:opacity-30"
+          >
+            reset →
+          </button>
+        )}
+      </span>
     </div>
   );
 }

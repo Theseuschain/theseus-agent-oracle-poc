@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { ActionKind } from "@/lib/terra-scenario";
 
 interface Props {
@@ -17,35 +16,41 @@ export function MintRedeemForm({ busy, pending, onSubmit }: Props) {
   const disabled = busy || pending;
 
   return (
-    <div className="surface p-4 sm:p-6">
-      <div className="eyebrow mb-3">Action</div>
+    <div className="mt-6">
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+        try an action
+      </p>
 
-      <div className="grid grid-cols-2 gap-1 mb-4 p-1 rounded-[10px] bg-surface-2 border border-border">
+      <div className="mt-3 flex items-baseline gap-4 text-[12px]">
         <button
-          className={`mono text-xs py-2 rounded-[7px] transition flex items-center justify-center gap-2 ${
-            tab === "MINT" ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
-          }`}
+          type="button"
           onClick={() => setTab("MINT")}
+          disabled={disabled}
+          className="italic underline decoration-border underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg disabled:opacity-30"
+          style={{ color: tab === "MINT" ? "var(--fg)" : "var(--fg-mute)" }}
         >
-          <ArrowDownToLine size={12} /> Mint USTD
+          mint USTD
         </button>
+        <span className="text-border">·</span>
         <button
-          className={`mono text-xs py-2 rounded-[7px] transition flex items-center justify-center gap-2 ${
-            tab === "REDEEM" ? "bg-coral text-bg" : "text-fg-dim hover:text-fg"
-          }`}
+          type="button"
           onClick={() => setTab("REDEEM")}
+          disabled={disabled}
+          className="italic underline decoration-border underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg disabled:opacity-30"
+          style={{ color: tab === "REDEEM" ? "var(--fg)" : "var(--fg-mute)" }}
         >
-          <ArrowUpFromLine size={12} /> Redeem USTD
+          redeem USTD
         </button>
       </div>
 
-      <p className="text-xs text-fg-dim mb-3 leading-relaxed">
+      <p className="mt-2 text-[12px] text-fg-mute leading-relaxed">
         {tab === "MINT"
           ? "Burn LUND to receive USTD. Adds new USTD claims to the system."
           : "Burn USTD to receive LUND. Forces the protocol to mint new LUND."}
       </p>
 
       <form
+        className="mt-3 flex items-baseline gap-3 text-[13px]"
         onSubmit={(e) => {
           e.preventDefault();
           const n = Number(amount);
@@ -53,34 +58,23 @@ export function MintRedeemForm({ busy, pending, onSubmit }: Props) {
           onSubmit(tab, n);
         }}
       >
-        <div className="relative mb-3">
-          <input
-            type="text"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputMode="decimal"
-            className="w-full px-3 py-3 pr-16 mono text-sm rounded-[10px] bg-surface-2 border border-border focus:outline-none focus:border-coral"
-            disabled={disabled}
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-mute mono text-xs">
-            USTD
-          </span>
-        </div>
-
+        <input
+          type="text"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          inputMode="decimal"
+          disabled={disabled}
+          className="w-40 border-b border-border bg-transparent font-mono text-[13px] text-fg focus:border-fg focus:outline-none disabled:opacity-50"
+        />
+        <span className="font-mono text-[11px] text-fg-mute">USTD</span>
         <button
           type="submit"
-          className="btn btn-primary w-full justify-center"
           disabled={disabled || !amount}
+          className="ml-2 text-fg hover:underline disabled:opacity-30"
         >
-          {pending ? "agent reasoning…" : busy ? "submitting…" : tab === "MINT" ? "Mint" : "Redeem"}
+          {pending ? "agent reasoning…" : busy ? "submitting…" : tab === "MINT" ? "mint →" : "redeem →"}
         </button>
       </form>
-
-      <div className="mt-3 text-[10px] mono text-fg-mute leading-relaxed">
-        The protocol calls the failsafe agent before executing.
-        Agent says <span className="text-green">ALLOW</span>: action goes through.{" "}
-        <span className="text-red">REFUSE</span>: action reverts.
-      </div>
     </div>
   );
 }

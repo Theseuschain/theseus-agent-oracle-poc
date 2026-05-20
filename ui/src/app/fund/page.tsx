@@ -8,7 +8,6 @@ import { FundScenarioControls } from "@/components/fund/FundScenarioControls";
 import { FundTimeline } from "@/components/fund/FundTimeline";
 import { SovereignFundLivePanel } from "@/components/fund/SovereignFundLivePanel";
 import { SovereignFundJsonLd } from "@/components/JsonLd";
-import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   FUND_PRESETS,
   FundAgentDecision,
@@ -26,6 +25,9 @@ import {
   replaceUrl,
   writeFundUrl,
 } from "@/lib/url-state";
+
+const POA_URL =
+  "https://theseus.network/poa/5LkY9d2vH6mR8nQ1bX3cP5tF7eK4aV2sZ8wM5oG1pJqC";
 
 export default function FundPage() {
   const [scenario, setScenario] = useState<FundScenarioState>(
@@ -148,18 +150,31 @@ export default function FundPage() {
       <SovereignFundJsonLd />
       <TopBar mode="mock" />
       <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
-          <header className="mb-6 sm:mb-8 md:mb-10">
-            <div className="eyebrow mb-2">Live demo</div>
-            <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
-              Sovereign Fund
-            </h1>
-            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
-              Pick a market preset and run a tick.
-            </p>
-          </header>
+        <div className="mx-auto max-w-[760px] pt-12">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
+            <a
+              href="/"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              ← directory
+            </a>
+            <a
+              href={POA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              on chain ↗
+            </a>
+          </div>
 
-          <div id="fund-scenarios">
+          <p className="mb-12 text-[13.5px] leading-[1.7] text-fg-mute">
+            A sovereign agent that paper-trades a USDC/WETH portfolio against
+            a written mandate. Pick a market preset and run a tick — watch
+            the agent decide whether to buy, hold, or sell.
+          </p>
+
+          <div id="fund-scenarios" className="mb-10">
             <FundScenarioControls
               agentPending={scenario.pending}
               presetLabel={scenario.presetLabel}
@@ -168,12 +183,15 @@ export default function FundPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <div className="mb-10">
             <PortfolioPanel
               portfolio={scenario.portfolio}
               market={scenario.market}
               presetLabel={scenario.presetLabel}
             />
+          </div>
+
+          <div className="mb-10">
             <FundTickButton
               busy={busy}
               pending={scenario.pending}
@@ -181,13 +199,20 @@ export default function FundPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              tick timeline
+            </p>
             <FundTimeline entries={scenario.events} />
           </div>
 
-          <SovereignFundLivePanel />
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              live deployment · base sepolia
+            </p>
+            <SovereignFundLivePanel />
+          </div>
         </div>
-        <CommitmentSurfaceFooter contract="sovereignFund" />
       </main>
     </>
   );

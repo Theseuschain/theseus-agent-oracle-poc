@@ -10,25 +10,17 @@ interface Props {
 export function TickList({ ticks }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   return (
-    <div className="surface p-5 md:p-6 mb-5">
-      <div className="flex items-baseline justify-between mb-4">
-        <div className="eyebrow">Tick history · newest first</div>
-        <span className="mono text-[10px] text-fg-mute">
-          {ticks.length} ticks total
-        </span>
-      </div>
-      <div className="space-y-2">
-        {ticks.map((tick) => (
-          <TickRowEl
-            key={tick.index}
-            tick={tick}
-            open={open === tick.index}
-            onToggle={() =>
-              setOpen(open === tick.index ? null : tick.index)
-            }
-          />
-        ))}
-      </div>
+    <div className="border-t border-border">
+      {ticks.map((tick) => (
+        <TickRowEl
+          key={tick.index}
+          tick={tick}
+          open={open === tick.index}
+          onToggle={() =>
+            setOpen(open === tick.index ? null : tick.index)
+          }
+        />
+      ))}
     </div>
   );
 }
@@ -47,51 +39,49 @@ function TickRowEl({
   const isSell = tick.action === "SELL_TOKEN";
   const isHold = tick.action === "HOLD";
   return (
-    <div className="rounded-[8px] border border-border bg-surface-2">
+    <div className="border-b border-border">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between gap-4 text-left hover:bg-surface transition"
+        className="w-full py-3 flex items-center justify-between gap-4 text-left transition-colors hover:text-fg"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="mono text-[10.5px] uppercase tracking-wider text-fg-mute tnum w-7 shrink-0">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-mute tnum w-7 shrink-0">
             #{tick.index}
           </span>
           <span
-            className={`badge shrink-0 ${
-              isBuy
-                ? "badge-priced"
-                : isSell
-                  ? "badge-stale"
-                  : isPass
-                    ? "badge-stale"
-                    : "badge-stale"
-            }`}
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em] shrink-0"
+            style={{
+              color: isBuy || isSell ? "var(--coral)" : "var(--fg-mute)",
+            }}
           >
-            {tick.action}
+            {isBuy ? "buy" : isSell ? "sell" : isPass ? "pass" : "hold"}
           </span>
           {!isHold && (
-            <span className="mono text-[11.5px] text-fg truncate min-w-0">
+            <span className="font-mono text-[11.5px] text-fg truncate min-w-0">
               {tick.token}
             </span>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {isBuy && (
-            <span className="mono text-[11.5px] tnum text-green">
+            <span className="font-mono text-[11.5px] tnum text-fg">
               −${(Number(tick.amountUsdc) / 1e6).toFixed(2)}
             </span>
           )}
           {isSell && (
-            <span className="mono text-[11.5px] tnum text-coral">
+            <span
+              className="font-mono text-[11.5px] tnum"
+              style={{ color: "var(--coral)" }}
+            >
               +${(Number(tick.amountUsdc) / 1e6).toFixed(2)}
             </span>
           )}
-          <span className="mono text-[10.5px] text-fg-mute hidden sm:inline">
+          <span className="font-mono text-[10.5px] text-fg-mute hidden sm:inline">
             {ageRelative(tick.timestamp)}
           </span>
-          <span className="mono text-[10.5px] text-fg-mute">
+          <span className="font-mono text-[10.5px] text-fg-mute">
             {open ? "↓" : "→"}
           </span>
         </div>
@@ -166,39 +156,44 @@ function TickDetail({ tick }: { tick: TickRow }) {
   }
 
   return (
-    <div className="border-t border-border px-4 py-4 space-y-3">
+    <div className="pb-4 pt-2 space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 gap-x-4 text-[11.5px]">
-        <KV k="Reason hash" v={shortHex(tick.reasonHash)} title={tick.reasonHash} />
+        <KV k="reason hash" v={shortHex(tick.reasonHash)} title={tick.reasonHash} />
         <KV
-          k="Timestamp"
+          k="timestamp"
           v={new Date(Number(tick.timestamp) * 1000).toISOString().replace("T", " ").slice(0, 19) + "Z"}
         />
-        <KV k="Paper USDC after" v={`$${(Number(tick.paperUsdcAfter) / 1e6).toFixed(2)}`} />
-        <KV k="Tick index" v={`#${tick.index}`} />
+        <KV k="paper usdc after" v={`$${(Number(tick.paperUsdcAfter) / 1e6).toFixed(2)}`} />
+        <KV k="tick index" v={`#${tick.index}`} />
       </div>
 
       {!tick.blobUrl && (
-        <div className="mono text-[11px] text-fg-mute">
+        <p className="font-mono text-[11px] text-fg-mute">
           Blob storage not configured at write-time. The reason hash is the
           full commitment; the reasoning blob isn&apos;t hosted yet
           (set BLOB_READ_WRITE_TOKEN in production to enable).
-        </div>
+        </p>
       )}
 
       {tick.blobUrl && loading && (
-        <div className="mono text-[11px] text-fg-mute">Loading reasoning blob…</div>
+        <p className="font-mono text-[11px] text-fg-mute">Loading reasoning blob…</p>
       )}
 
       {tick.blobUrl && error && (
-        <div className="mono text-[11px] text-amber">
+        <p
+          className="font-mono text-[11px]"
+          style={{ color: "var(--coral)" }}
+        >
           Blob fetch failed: {error}
-        </div>
+        </p>
       )}
 
       {blob?.decision?.reasoning && (
         <div>
-          <div className="eyebrow mb-1.5">Agent reasoning</div>
-          <p className="text-[13px] leading-relaxed">
+          <p className="mb-1.5 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+            agent reasoning
+          </p>
+          <p className="text-[13px] leading-[1.7] text-fg-mute">
             {blob.decision.reasoning}
           </p>
         </div>
@@ -206,12 +201,14 @@ function TickDetail({ tick }: { tick: TickRow }) {
 
       {blob?.decision?.checks && (
         <div>
-          <div className="eyebrow mb-1.5">Checklist</div>
+          <p className="mb-1.5 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+            checklist
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-1.5 gap-x-4 text-[11.5px]">
             {Object.entries(blob.decision.checks).map(([k, v]) => (
               <div key={k} className="flex items-baseline gap-2">
-                <span className="mono text-fg-mute">{k}:</span>
-                <span className="mono">{String(v)}</span>
+                <span className="font-mono text-fg-mute">{k}:</span>
+                <span className="font-mono">{String(v)}</span>
               </div>
             ))}
           </div>
@@ -220,17 +217,19 @@ function TickDetail({ tick }: { tick: TickRow }) {
 
       {blob?.dossier?.token && blob?.dossier?.candidate && (
         <div>
-          <div className="eyebrow mb-1.5">Dossier</div>
+          <p className="mb-1.5 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+            dossier
+          </p>
           <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-[11.5px]">
-            <KV k="Name" v={blob.dossier.token.name ?? ""} />
-            <KV k="Symbol" v={blob.dossier.token.symbol ?? ""} />
-            <KV k="Quote" v={blob.dossier.candidate.quote ?? ""} />
-            <KV k="Fee tier" v={`${blob.dossier.candidate.feeTier ?? "?"}`} />
+            <KV k="name" v={blob.dossier.token.name ?? ""} />
+            <KV k="symbol" v={blob.dossier.token.symbol ?? ""} />
+            <KV k="quote" v={blob.dossier.candidate.quote ?? ""} />
+            <KV k="fee tier" v={`${blob.dossier.candidate.feeTier ?? "?"}`} />
             <KV
-              k="Pool initialized"
+              k="pool initialized"
               v={blob.dossier.pool?.initialized ? "yes" : "no"}
             />
-            <KV k="Decimals" v={`${blob.dossier.token.decimals ?? "?"}`} />
+            <KV k="decimals" v={`${blob.dossier.token.decimals ?? "?"}`} />
           </div>
         </div>
       )}
@@ -240,18 +239,19 @@ function TickDetail({ tick }: { tick: TickRow }) {
           href={`https://sepolia.basescan.org/tx/${tick.reasonHash}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mono text-[10.5px] uppercase tracking-wider text-fg-dim hover:text-fg transition"
+          className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-mute transition-colors hover:text-fg"
         >
-          Reason hash on Basescan ↗
+          reason hash on basescan ↗
         </a>
         {tick.blobUrl && (
           <a
             href={tick.blobUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mono text-[10.5px] uppercase tracking-wider text-coral hover:underline underline-offset-[3px]"
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em] hover:underline underline-offset-[3px]"
+            style={{ color: "var(--coral)" }}
           >
-            Full reasoning blob ↗
+            full reasoning blob ↗
           </a>
         )}
         {tick.action !== "HOLD" && (
@@ -259,9 +259,9 @@ function TickDetail({ tick }: { tick: TickRow }) {
             href={`https://basescan.org/address/${tick.token}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mono text-[10.5px] uppercase tracking-wider text-fg-dim hover:text-fg transition"
+            className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-mute transition-colors hover:text-fg"
           >
-            Token on Base mainnet ↗
+            token on base mainnet ↗
           </a>
         )}
       </div>
@@ -280,11 +280,11 @@ function KV({
 }) {
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
-      <span className="mono text-[10px] uppercase tracking-wider text-fg-mute">
+      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-mute">
         {k}
       </span>
       <span
-        className="mono text-fg truncate"
+        className="font-mono text-fg truncate"
         title={title || v}
       >
         {v}

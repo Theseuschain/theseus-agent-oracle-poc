@@ -22,8 +22,6 @@ export function BridgePanel({ state, presetLabel }: Props) {
     [4, 2],
     true,
   );
-  // Source-finality mismatch (negative lag) is a hard fail, regardless of
-  // magnitude. Otherwise grade by absolute lag.
   const finalityHealth: Health =
     finalityLag < 0
       ? "crit"
@@ -47,9 +45,6 @@ export function BridgePanel({ state, presetLabel }: Props) {
         ? "normal range (under ~30 blocks)"
         : "behind source finality";
 
-  // Pre-run alert banners. Surface the structural smoking guns before the
-  // user has to click Release, matching the flash-loan banner Governance
-  // shows in ProposalPanel.
   const showReplayBanner = state.attestationAlreadyClaimed;
   const showFinalityBanner = state.finalizedHeight > state.sourceHeight;
   const showRoninBanner =
@@ -59,53 +54,54 @@ export function BridgePanel({ state, presetLabel }: Props) {
     state.validatorsSigning === state.validatorQuorum;
 
   return (
-    <div className="surface p-4 sm:p-6 lg:col-span-2">
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div>
-          <div className="eyebrow mb-1">Source-chain state</div>
-          <div className="serif text-2xl">Cross-chain bridge</div>
-        </div>
-        <span className="badge badge-stale">{presetLabel}</span>
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+          source-chain state
+        </p>
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-mute">
+          {presetLabel}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-y-4 gap-x-6 mb-5">
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
         <BigStat
-          label="Validator signatures"
+          label="validator signatures"
           value={`${state.validatorsSigning} / ${state.validatorsTotal}`}
           sub={sigSubLabel}
           health={sigHealth}
         />
         <BigStat
-          label="Finality lag"
+          label="finality lag"
           value={`${finalityLag} blocks`}
           sub={finalitySubLabel}
           health={finalityHealth}
         />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6 text-xs">
-        <Stat
-          label="Validator set rotated 24h"
+      <div className="mt-6 border-t border-border">
+        <Row
+          label="validator set rotated 24h"
           value={state.validatorSetRotated24h ? "yes" : "no"}
           health={rotationHealth}
         />
-        <Stat
-          label="Slashings 24h"
+        <Row
+          label="slashings 24h"
           value={String(state.recentSlashEvents24h)}
           health={slashHealth}
         />
-        <Stat
-          label="Replay state"
+        <Row
+          label="replay state"
           value={state.attestationAlreadyClaimed ? "consumed" : "fresh"}
           sub="attestation nonce"
           health={replayHealth}
         />
-        <Stat label="Attestation age" value={`${state.attestationAgeSec}s`} />
-        <Stat label="TVL" value={fmtUsd(state.tvlUsd)} />
-        <Stat
-          label="Withdraw pressure"
+        <Row label="attestation age" value={`${state.attestationAgeSec}s`} />
+        <Row label="tvl" value={fmtUsd(state.tvlUsd)} />
+        <Row
+          label="withdraw pressure"
           value={`${(state.withdrawRate1h * 100).toFixed(2)}%/h`}
-          sub={`= ${fmtUsd(hourlyOutflow)}/hour out`}
+          sub={`${fmtUsd(hourlyOutflow)}/hour out`}
           health={withdrawHealth}
         />
       </div>
@@ -134,9 +130,6 @@ export function BridgePanel({ state, presetLabel }: Props) {
 
 type Health = "ok" | "warn" | "crit";
 
-// healthLevel: pass a positive number, higher means worse by default.
-// inverted=true flips the polarity (higher means better, used for the
-// signing-headroom metric where more headroom is better).
 function healthLevel(
   value: number,
   [warn, crit]: [number, number],
@@ -152,10 +145,10 @@ function healthLevel(
   return "ok";
 }
 
-function healthColor(h?: Health): string {
-  if (h === "crit") return "text-red";
-  if (h === "warn") return "text-amber";
-  return "text-green";
+function healthStyle(h?: Health): React.CSSProperties {
+  if (h === "crit") return { color: "var(--coral)" };
+  if (h === "warn") return { color: "var(--fg)" };
+  return { color: "var(--fg-mute)" };
 }
 
 function BigStat({
@@ -171,16 +164,26 @@ function BigStat({
 }) {
   return (
     <div>
-      <div className="eyebrow mb-1">{label}</div>
-      <div className="serif text-3xl tnum">{value}</div>
-      <div className={`mono text-[11px] mt-0.5 ${healthColor(health)}`}>
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+        {label}
+      </p>
+      <p
+        className="serif mt-1 text-3xl tnum tracking-tight"
+        style={health === "crit" ? { color: "var(--coral)" } : undefined}
+      >
+        {value}
+      </p>
+      <p
+        className="mt-1 font-mono text-[10.5px]"
+        style={healthStyle(health)}
+      >
         {sub}
-      </div>
+      </p>
     </div>
   );
 }
 
-function Stat({
+function Row({
   label,
   value,
   sub,
@@ -192,27 +195,41 @@ function Stat({
   health?: Health;
 }) {
   return (
-    <div>
-      <div className="eyebrow mb-0.5">{label}</div>
-      <div className="mono text-sm tnum text-fg">{value}</div>
-      {sub && (
-        <div
-          className={`mono text-[10px] ${healthColor(health) || "text-fg-mute"}`}
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-3 last:border-b-0">
+      <span className="font-mono text-[11.5px] text-fg-mute">{label}</span>
+      <span className="flex items-baseline gap-3 text-right">
+        <span
+          className="font-mono tnum text-[13px]"
+          style={health === "crit" ? { color: "var(--coral)" } : { color: "var(--fg)" }}
         >
-          {sub}
-        </div>
-      )}
+          {value}
+        </span>
+        {sub && (
+          <span
+            className="font-mono text-[10.5px]"
+            style={healthStyle(health)}
+          >
+            {sub}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
 
 function PreRunAlert({ title, body }: { title: string; body: string }) {
   return (
-    <div className="mt-4 rounded-[8px] border border-red/40 bg-red/5 p-3">
-      <div className="mono text-[10px] uppercase tracking-wider text-red mb-1">
+    <div
+      className="mt-5 border-l-2 pl-3"
+      style={{ borderColor: "var(--coral)" }}
+    >
+      <p
+        className="font-mono text-[10.5px] uppercase tracking-[0.18em]"
+        style={{ color: "var(--coral)" }}
+      >
         {title}
-      </div>
-      <p className="text-[12px] text-fg-dim leading-relaxed">{body}</p>
+      </p>
+      <p className="mt-1 text-[12px] leading-relaxed text-fg-mute">{body}</p>
     </div>
   );
 }

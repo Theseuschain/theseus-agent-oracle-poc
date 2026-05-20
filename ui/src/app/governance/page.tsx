@@ -7,7 +7,6 @@ import { ReviewButton } from "@/components/governance/ReviewButton";
 import { GovernanceScenarioControls } from "@/components/governance/GovernanceScenarioControls";
 import { GovernanceTimeline } from "@/components/governance/GovernanceTimeline";
 import { GovernanceReviewerJsonLd } from "@/components/JsonLd";
-import { CommitmentSurfaceFooter } from "@/components/CommitmentSurfaceFooter";
 import {
   GOVERNANCE_PRESETS,
   GovernanceAgentVerdict,
@@ -160,17 +159,30 @@ export default function GovernancePage() {
       <GovernanceReviewerJsonLd />
       <TopBar mode="mock" />
       <main className="min-h-screen px-3 sm:px-4 md:px-8 pb-12">
-        <div className="max-w-7xl mx-auto pt-6 sm:pt-8">
-          <header className="mb-6 sm:mb-8 md:mb-10">
-            <div className="eyebrow mb-2">Live demo</div>
-            <h1 className="serif text-2xl sm:text-3xl md:text-4xl tracking-tight mb-2">
-              Governance Reviewer
-            </h1>
-            <p className="text-fg-dim text-sm leading-relaxed max-w-2xl">
-              Presets cover the Beanstalk flash-loan attack and the
-              dust-stake snipe.
-            </p>
-          </header>
+        <div className="mx-auto max-w-[760px] pt-12">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
+            <a
+              href="/"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              ← directory
+            </a>
+            <a
+              href="https://theseus.network/poa/5FmN8vY6cP1qK4xR7zL3jB9wE5dV8aS2hT6gM3fX9pZ7nCk2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.18em] text-fg-mute transition-colors hover:text-fg"
+            >
+              on chain ↗
+            </a>
+          </div>
+
+          <p className="mb-12 text-[13.5px] leading-[1.7] text-fg-mute">
+            The Governance Reviewer is an AI agent that reads DAO proposals
+            and posts an advisory verdict before the vote opens. Pick a
+            preset below — watch it flag the flash-loan and dust-stake
+            shapes a contract can&apos;t reason about.
+          </p>
 
           <div id="governance-scenarios">
             <GovernanceScenarioControls
@@ -181,11 +193,17 @@ export default function GovernancePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <div className="mt-10">
+            <p className="mb-2 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              the proposal
+            </p>
             <ProposalPanel
               proposal={scenario.proposal}
               presetLabel={scenario.presetLabel}
             />
+          </div>
+
+          <div className="mt-10">
             <ReviewButton
               busy={busy}
               pending={scenario.pending}
@@ -193,11 +211,13 @@ export default function GovernancePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="mt-10 border-t pt-6" style={{ borderColor: "var(--border)" }}>
+            <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+              reviewer verdicts
+            </p>
             <GovernanceTimeline entries={scenario.events} />
           </div>
         </div>
-        <CommitmentSurfaceFooter contract="governanceReviewer" live />
       </main>
     </>
   );

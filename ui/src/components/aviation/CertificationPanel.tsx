@@ -15,38 +15,35 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
     c.canActuateFlightControls && c.proposedTrainingClass !== "simulator";
 
   return (
-    <div className="surface p-4 sm:p-6 lg:col-span-2">
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div>
-          <div className="eyebrow mb-1">Certification change #{c.changeId}</div>
-          <div className="serif text-2xl leading-snug">{c.title}</div>
-          <div className="mono text-[11px] text-fg-mute mt-1">
-            {c.aircraftModel}
-          </div>
+    <div>
+      <p className="text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+        certification change #{c.changeId} · {presetLabel}
+      </p>
+      <div className="mt-2">
+        <div className="serif text-2xl leading-snug tracking-tight">
+          {c.title}
         </div>
-        <span className="badge badge-stale">{presetLabel}</span>
-      </div>
-
-      <div className="mb-4">
-        <div className="eyebrow mb-1.5">Summary (manufacturer&apos;s pitch)</div>
-        <p className="text-sm leading-relaxed text-fg-dim">{c.summary}</p>
-      </div>
-
-      <div className="mb-5 rounded-[8px] border border-border bg-surface-2 p-3">
-        <div className="eyebrow mb-1.5">Technical summary (what it actually does)</div>
-        <p className="mono text-[12px] leading-relaxed text-fg-dim whitespace-pre-wrap break-words">
-          {c.technicalSummary}
+        <p className="mt-1 font-mono text-[11px] text-fg-mute">
+          {c.aircraftModel}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6 text-xs">
-        <Stat
-          label="Actuates flight controls"
+      <p className="mt-5 text-[13px] leading-relaxed text-fg-mute">
+        {c.summary}
+      </p>
+
+      <p className="mt-5 whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-fg-mute">
+        {c.technicalSummary}
+      </p>
+
+      <div className="mt-6 border-t border-border">
+        <Row
+          label="actuates flight controls"
           value={c.canActuateFlightControls ? "yes" : "no"}
-          health={c.canActuateFlightControls ? "crit" : "ok"}
+          critical={c.canActuateFlightControls}
         />
-        <Stat
-          label="Primary-trigger sensors"
+        <Row
+          label="primary-trigger sensors"
           value={String(c.primaryTriggerSensorCount)}
           sub={
             c.primaryTriggerSensorCount === 0
@@ -55,23 +52,17 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
                 ? "single point of failure"
                 : "redundant"
           }
-          health={
-            c.primaryTriggerSensorCount === 0
-              ? "ok"
-              : c.canActuateFlightControls && c.primaryTriggerSensorCount === 1
-                ? "crit"
-                : c.primaryTriggerSensorCount === 1
-                  ? "warn"
-                  : "ok"
+          critical={
+            c.canActuateFlightControls && c.primaryTriggerSensorCount === 1
           }
         />
-        <Stat
-          label="Overrides pilot input"
+        <Row
+          label="overrides pilot input"
           value={c.canOverridePilotInput ? "yes" : "no"}
-          health={c.canOverridePilotInput ? "crit" : "ok"}
+          critical={c.canOverridePilotInput}
         />
-        <Stat
-          label="Proposed training"
+        <Row
+          label="proposed training"
           value={
             c.proposedTrainingClass === "simulator"
               ? "full sim"
@@ -79,33 +70,27 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
                 ? "iPad differences"
                 : "none"
           }
-          health={
-            trainingMismatch
-              ? "crit"
-              : c.proposedTrainingClass === "none" && c.canOverridePilotInput
-                ? "warn"
-                : "ok"
-          }
+          critical={trainingMismatch}
         />
-        <Stat
-          label="Disclosed in FCOM"
+        <Row
+          label="disclosed in FCOM"
           value={c.disclosedInFCOM ? "yes" : "NO"}
-          health={c.disclosedInFCOM ? "ok" : "crit"}
+          critical={!c.disclosedInFCOM}
         />
-        <Stat
-          label="Fleet affected"
-          value={c.fleetSize.toLocaleString()}
-        />
+        <Row label="fleet affected" value={c.fleetSize.toLocaleString()} />
       </div>
 
       {(singleSensorActuator || overrideUndocumented) && (
-        <div className="mt-4 rounded-[8px] border border-red/40 bg-red/5 p-3 space-y-2">
+        <div className="mt-6 space-y-3">
           {singleSensorActuator && (
             <div>
-              <div className="mono text-[10px] uppercase tracking-wider text-red mb-1">
+              <p
+                className="font-mono text-[10.5px] uppercase tracking-[0.18em]"
+                style={{ color: "var(--coral)" }}
+              >
                 single-sensor flight-control trigger
-              </div>
-              <p className="text-[12px] text-fg-dim leading-relaxed">
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-fg-mute">
                 This change can move flight surfaces based on a reading from
                 one sensor with no redundancy. A single failed sensor commands
                 a fatal control action. This is the MCAS shape.
@@ -114,10 +99,13 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
           )}
           {overrideUndocumented && (
             <div>
-              <div className="mono text-[10px] uppercase tracking-wider text-red mb-1">
+              <p
+                className="font-mono text-[10.5px] uppercase tracking-[0.18em]"
+                style={{ color: "var(--coral)" }}
+              >
                 undocumented pilot override
-              </div>
-              <p className="text-[12px] text-fg-dim leading-relaxed">
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-fg-mute">
                 The change can override pilot input but the disengagement
                 procedure is not in the Flight Crew Operating Manual. Pilots
                 cannot recover from a failure mode they were not told exists.
@@ -128,12 +116,15 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
       )}
 
       {c.similarChangesRequiredSimAfterEvents > 0 && (
-        <div className="mt-4 rounded-[8px] border border-amber/40 bg-amber/5 p-3">
-          <div className="mono text-[10px] uppercase tracking-wider text-amber mb-1">
-            {c.similarChangesRequiredSimAfterEvents} similar prior changes ended
-            up requiring simulator training after in-service incidents
-          </div>
-          <p className="text-[12px] text-fg-dim leading-relaxed">
+        <div className="mt-6">
+          <p
+            className="font-mono text-[10.5px] uppercase tracking-[0.18em]"
+            style={{ color: "var(--coral)" }}
+          >
+            {c.similarChangesRequiredSimAfterEvents} similar prior changes
+            ended up requiring simulator training after in-service incidents
+          </p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-fg-mute">
             The manufacturer&apos;s &ldquo;minor change&rdquo; classification
             has lost credibility against the historical pattern.
           </p>
@@ -143,36 +134,36 @@ export function CertificationPanel({ change: c, presetLabel }: Props) {
   );
 }
 
-type Health = "ok" | "warn" | "crit";
-
-function healthColor(h?: Health): string {
-  if (h === "crit") return "text-red";
-  if (h === "warn") return "text-amber";
-  return "text-green";
-}
-
-function Stat({
+function Row({
   label,
   value,
   sub,
-  health,
+  critical,
 }: {
   label: string;
   value: string;
   sub?: string;
-  health?: Health;
+  critical?: boolean;
 }) {
   return (
-    <div>
-      <div className="eyebrow mb-0.5">{label}</div>
-      <div className="mono text-sm tnum text-fg">{value}</div>
-      {sub && (
-        <div
-          className={`mono text-[10px] ${healthColor(health) || "text-fg-mute"}`}
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-2.5 text-[12.5px]">
+      <span className="font-mono text-fg-mute">{label}</span>
+      <span className="flex items-baseline gap-3">
+        <span
+          className="font-mono tnum"
+          style={{ color: critical ? "var(--coral)" : "var(--fg)" }}
         >
-          {sub}
-        </div>
-      )}
+          {value}
+        </span>
+        {sub && (
+          <span
+            className="font-mono text-[10.5px]"
+            style={{ color: critical ? "var(--coral)" : "var(--fg-mute)" }}
+          >
+            {sub}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

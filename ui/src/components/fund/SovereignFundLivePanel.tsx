@@ -53,50 +53,47 @@ export function SovereignFundLivePanel() {
   const wethHuman = state ? Number(state.wethBalance) / 1e18 : 0;
 
   return (
-    <section className="surface p-5 md:p-6 mt-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
-        <div>
-          <div className="eyebrow mb-1">Live deployment · Base Sepolia</div>
-          <h2 className="serif text-xl md:text-2xl tracking-tight">
-            The same agent, deployed for real.
-          </h2>
-        </div>
+    <div>
+      <p className="text-[12px] leading-relaxed text-fg-mute">
+        The same agent, deployed for real.{" "}
         <a
           href={basescanAddressUrl(fund.address)}
           target="_blank"
           rel="noopener noreferrer"
-          className="mono text-[11px] uppercase tracking-wider text-coral hover:underline underline-offset-[3px] break-all"
+          className="font-mono text-[11px] uppercase tracking-[0.16em] text-fg-mute transition-colors hover:text-fg hover:underline break-all"
         >
           {fund.address} ↗
         </a>
-      </div>
+      </p>
 
       {err && (
-        <p className="mono text-[11px] text-amber">
+        <p className="mt-4 font-mono text-[11px]" style={{ color: "var(--coral)" }}>
           Couldn&apos;t read chain state: {err}
         </p>
       )}
 
       {!state && !err && (
-        <p className="mono text-[11px] text-fg-mute">Reading chain state…</p>
+        <p className="mt-4 font-mono text-[11px] text-fg-mute">
+          Reading chain state…
+        </p>
       )}
 
       {state && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-6 mb-5">
-            <Stat
+          <div className="mt-5 border-t border-border">
+            <Row
               label="USDC balance"
               value={`$${usdcHuman.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
               sub="held by the fund"
             />
-            <Stat
+            <Row
               label="WETH balance"
               value={wethHuman.toLocaleString(undefined, {
                 maximumFractionDigits: 4,
               })}
               sub="held by the fund"
             />
-            <Stat
+            <Row
               label="Ticks committed"
               value={state.tickCount.toString()}
               sub={
@@ -105,60 +102,57 @@ export function SovereignFundLivePanel() {
                   : "none yet"
               }
             />
-            <Stat
-              label="Agent (sole writer)"
-              value={`${AGENT_EOA.slice(0, 8)}…${AGENT_EOA.slice(-4)}`}
-              sub={
-                <a
-                  href={basescanAddressUrl(AGENT_EOA)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mono text-coral hover:underline underline-offset-[3px]"
-                >
-                  on Basescan ↗
-                </a>
-              }
-              isReact
-            />
+            <div className="flex items-baseline justify-between gap-3 border-b border-border py-3 last:border-b-0 text-[13px]">
+              <span className="font-mono text-fg-mute">Agent (sole writer)</span>
+              <span className="font-mono tnum text-fg">
+                {`${AGENT_EOA.slice(0, 8)}…${AGENT_EOA.slice(-4)}`}
+              </span>
+              <a
+                href={basescanAddressUrl(AGENT_EOA)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[11px] text-fg-mute transition-colors hover:text-fg hover:underline"
+              >
+                on Basescan ↗
+              </a>
+            </div>
           </div>
 
           {state.recentTicks.length === 0 ? (
-            <p className="text-[13px] text-fg-dim leading-relaxed">
+            <p className="mt-5 text-[12px] leading-relaxed text-fg-mute">
               The fund has been deployed but has not yet ticked. The scenarios
               above are run against mocked state; the live agent runs against
               the real chain once funded with USDC and pointed at a real
               market feed. Phase next.
             </p>
           ) : (
-            <div className="border-t border-border pt-4">
-              <div className="eyebrow mb-3">
-                Most recent ticks · newest first
-              </div>
-              <ul className="space-y-2">
+            <div className="mt-6">
+              <p className="mb-3 text-[10.5px] uppercase tracking-[0.18em] text-fg-mute">
+                most recent ticks · newest first
+              </p>
+              <ul>
                 {state.recentTicks.map((t) => (
                   <li
                     key={t.index}
-                    className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12.5px]"
+                    className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-border py-3 last:border-b-0 text-[12.5px]"
                   >
-                    <span className="mono text-fg-mute tnum w-7">
+                    <span className="font-mono tnum w-7 text-fg-mute">
                       #{t.index}
                     </span>
                     <span
-                      className={`badge shrink-0 ${
-                        t.action === "BUY_WETH"
-                          ? "badge-priced"
-                          : t.action === "SELL_WETH"
-                            ? "badge-stale"
-                            : "badge-stale"
-                      }`}
+                      className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+                      style={{
+                        color:
+                          t.action === "HOLD" ? "var(--fg)" : "var(--coral)",
+                      }}
                     >
                       {t.action}
                     </span>
-                    <span className="mono text-fg-dim">
+                    <span className="font-mono text-fg-mute">
                       USDC: ${(Number(t.usdcAfter) / 1e6).toFixed(2)} · WETH:{" "}
                       {(Number(t.wethAfter) / 1e18).toFixed(4)}
                     </span>
-                    <span className="mono text-fg-mute text-[10.5px]">
+                    <span className="font-mono text-[10.5px] text-fg-mute">
                       {ageRel(BigInt(t.timestamp))}
                     </span>
                   </li>
@@ -168,30 +162,26 @@ export function SovereignFundLivePanel() {
           )}
         </>
       )}
-    </section>
+    </div>
   );
 }
 
-function Stat({
+function Row({
   label,
   value,
   sub,
-  isReact,
 }: {
   label: string;
   value: string;
-  sub: React.ReactNode;
-  isReact?: boolean;
+  sub?: string;
 }) {
   return (
-    <div>
-      <div className="eyebrow mb-1">{label}</div>
-      <div className="serif text-xl md:text-[22px] tnum leading-tight">
-        {value}
-      </div>
-      <div className="mono text-[10.5px] mt-0.5 text-fg-mute">
-        {isReact ? sub : sub}
-      </div>
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-3 last:border-b-0 text-[13px]">
+      <span className="font-mono text-fg-mute">{label}</span>
+      <span className="font-mono tnum text-fg">{value}</span>
+      {sub && (
+        <span className="font-mono text-[11px] text-fg-mute tnum">{sub}</span>
+      )}
     </div>
   );
 }
