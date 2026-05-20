@@ -100,8 +100,8 @@ function Row({ entry }: { entry: TimelineEntry }) {
           </span>
         ) : (
           <span
-            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
-            style={{ color: allowed ? "var(--fg)" : "var(--coral)" }}
+            className="font-mono text-[10.5px] font-bold uppercase tracking-[0.16em]"
+            style={{ color: allowed ? "var(--green)" : "var(--coral)" }}
           >
             {allowed ? "allow" : "refuse"}
           </span>

@@ -21,9 +21,9 @@ export function AviationReviewButton({ busy, pending, onSubmit }: Props) {
       </button>
       <p className="mt-3 text-[11.5px] leading-relaxed text-fg-mute">
         The reviewer reads the change and posts an{" "}
-        <span style={{ color: "var(--fg)" }}>APPROVE</span>,{" "}
-        <span style={{ color: "var(--coral)" }}>CAUTION</span>, or{" "}
-        <span style={{ color: "var(--coral)" }}>REJECT</span> verdict before
+        <span className="font-bold" style={{ color: "var(--green)" }}>APPROVE</span>,{" "}
+        <span className="font-bold" style={{ color: "var(--coral)" }}>CAUTION</span>, or{" "}
+        <span className="font-bold" style={{ color: "var(--coral)" }}>REJECT</span> verdict before
         the certification authority issues its airworthiness directive. The
         verdict is advisory.
       </p>

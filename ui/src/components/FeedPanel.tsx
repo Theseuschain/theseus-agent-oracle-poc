@@ -25,8 +25,8 @@ export function FeedPanel({ feed, loading }: Props) {
         </span>
         {feed && (priced || refused) && (
           <span
-            className="text-[11px] uppercase tracking-[0.18em]"
-            style={{ color: refused ? "var(--coral)" : "var(--fg-mute)" }}
+            className="text-[11px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: refused ? "var(--coral)" : "var(--green)" }}
           >
             {refused ? "refused" : "priced"}
           </span>

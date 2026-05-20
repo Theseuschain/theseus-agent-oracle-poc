@@ -113,9 +113,9 @@ function Row({ entry }: { entry: FundTimelineEntry }) {
           </span>
         ) : (
           <span
-            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
+            className="font-mono text-[10.5px] font-bold uppercase tracking-[0.16em]"
             style={{
-              color: isAction ? "var(--coral)" : "var(--fg)",
+              color: isAction ? "var(--green)" : "var(--fg)",
             }}
           >
             {label}

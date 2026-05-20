@@ -178,6 +178,10 @@ body {
   --poa-destructive: var(--red);
   --poa-destructive-soft: rgba(255, 77, 77, 0.10);
 
+  /* Affirmative: --green for accepted / filed / verified verdicts. */
+  --poa-affirmative: var(--green);
+  --poa-affirmative-soft: rgba(93, 211, 158, 0.10);
+
   background: var(--poa-paper);
   color: var(--poa-ink);
   position: relative;

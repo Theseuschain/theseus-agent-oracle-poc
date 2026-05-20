@@ -88,7 +88,7 @@ const PRESET_CITATIONS: { label: string; citation: string; proposition: string }
 ];
 
 const OUTCOME_COLOR: Record<CitationOutcome, string> = {
-  verified: "var(--poa-ink)",
+  verified: "var(--poa-affirmative)",
   distinguishable: "hsl(33 65% 55%)",
   fabricated: "var(--poa-destructive, #e53e0c)",
 };
@@ -364,7 +364,7 @@ function CitationResult({
         {live.kind === "ok" && (
           <>
             <p
-              className="text-[10.5px] uppercase tracking-[0.18em]"
+              className="text-[10.5px] font-bold uppercase tracking-[0.18em]"
               style={{ color: OUTCOME_COLOR[live.outcome] }}
             >
               {OUTCOME_LABEL[live.outcome]}

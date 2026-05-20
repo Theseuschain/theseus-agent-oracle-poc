@@ -100,8 +100,8 @@ function Row({ entry }: { entry: BridgeTimelineEntry }) {
           </span>
         ) : (
           <span
-            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
-            style={{ color: refused ? "var(--coral)" : "var(--fg)" }}
+            className="font-mono text-[10.5px] font-bold uppercase tracking-[0.16em]"
+            style={{ color: refused ? "var(--coral)" : "var(--green)" }}
           >
             {allowed ? "allow" : "refuse"}
           </span>

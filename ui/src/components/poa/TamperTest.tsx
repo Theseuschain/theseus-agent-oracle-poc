@@ -225,7 +225,7 @@ function RetconResult({
 
       <div className="mt-5">
         <p
-          className="text-[10.5px] uppercase tracking-[0.18em]"
+          className="text-[10.5px] font-bold uppercase tracking-[0.18em]"
           style={{ color: "var(--poa-destructive, #e53e0c)" }}
         >
           signature mismatch
@@ -351,8 +351,16 @@ function EventResult({
         )}
         {state.kind === "ok" && (
           <>
-            <p className="text-[10.5px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)]">
-              filed · {state.structuralClaim}
+            <p className="text-[10.5px] uppercase tracking-[0.18em]">
+              <span
+                className="font-bold"
+                style={{ color: "var(--poa-affirmative)" }}
+              >
+                filed
+              </span>
+              <span className="text-[var(--poa-ink-soft)]">
+                {" "}· {state.structuralClaim}
+              </span>
             </p>
             <p className="mt-2 font-serif text-[14.5px] leading-[1.7] text-[var(--poa-ink)]">
               {state.dispatch}

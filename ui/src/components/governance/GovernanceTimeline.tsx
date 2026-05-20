@@ -96,8 +96,8 @@ function Row({ entry }: { entry: GovernanceTimelineEntry }) {
           </span>
         ) : (
           <span
-            className="font-mono text-[10.5px] uppercase tracking-[0.16em]"
-            style={{ color: label.refused ? "var(--coral)" : "var(--fg)" }}
+            className="font-mono text-[10.5px] font-bold uppercase tracking-[0.16em]"
+            style={{ color: label.refused ? "var(--coral)" : "var(--green)" }}
           >
             {label.text}
           </span>

@@ -373,10 +373,10 @@ function AssignmentResult({
         {live.kind === "ok" && (
           <>
             <p
-              className="text-[10.5px] uppercase tracking-[0.18em]"
+              className="text-[10.5px] font-bold uppercase tracking-[0.18em]"
               style={{
                 color: live.accepted
-                  ? "var(--poa-ink)"
+                  ? "var(--poa-affirmative)"
                   : "var(--poa-destructive, #e53e0c)",
               }}
             >
