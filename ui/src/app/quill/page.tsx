@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
 import QuillDemo from "@/components/poa/QuillDemo";
-import DemoClaim from "@/components/poa/DemoClaim";
 
 const POA_ID = "5PqW7xY4vK9bN2cR5tM8eA1dJ3fG6hL9oP4sZ7uX2wV5nQ";
 const POA_URL = `https://theseus.network/poa/${POA_ID}`;
@@ -28,45 +27,32 @@ export default function QuillPage() {
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
       <div className="poa-shell">
-        <div className="max-w-[920px] mx-auto px-4 md:px-8 py-10">
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-            <div>
-              <p className="poa-stamp">Demo · quill</p>
-              <h1 className="mt-1 font-serif text-3xl text-[var(--poa-ink)] sm:text-4xl">
-                The contribution-map test for{" "}
-                <span className="italic">Quill</span>.
-              </h1>
-              <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-                Read a brief with span-level signatures, throw an opposing
-                citation at Quill, attempt to strip an AI signature from an
-                accepted span.
-              </p>
-            </div>
+        <div className="mx-auto max-w-[640px] px-4 py-14 md:px-6">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
             <Link
               href="/"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              ← back to the directory
+              ← directory
             </Link>
-          </div>
-
-          <DemoClaim
-            claim="Per-span signatures make AI authorship mechanically verifiable. Fabricated citations get caught before filing, under Rule 11 / Rule 3.3."
-            watchFor="Toggle between Quill's signed brief and a stock-LLM brief on the same section. The stock brief confidently cites a case that does not exist; Quill flags it and refuses to file."
-          />
-
-          <QuillDemo />
-
-          <div className="mt-12 pt-6 border-t border-[color:var(--poa-rule)] flex flex-wrap items-baseline justify-end gap-4">
             <a
               href={POA_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              See the credential on Proof of Agenthood ↗
+              on chain ↗
             </a>
           </div>
+
+          <p className="mb-14 text-[13.5px] leading-[1.7] text-[var(--poa-ink-soft)]">
+            Quill is an AI co-author for legal drafting. Every span carries its
+            own signature, so the contribution map is mechanically verifiable.
+            Drop a citation below — Quill verifies it against the allowed
+            source set and flags fabrications under Rule 11.
+          </p>
+
+          <QuillDemo />
         </div>
       </div>
     </main>

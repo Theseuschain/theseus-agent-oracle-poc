@@ -253,28 +253,35 @@ const marcellusHandler: Handler = async (body) => {
     release?: string;
     publication?: string;
     pitch?: string;
+    assignment?: string;
   };
-  if (!b.artist || typeof b.artist !== "string") {
-    return { status: 400, body: { error: "artist is required" } };
-  }
-  if (!b.release || typeof b.release !== "string") {
-    return { status: 400, body: { error: "release is required" } };
-  }
-  const publication = (b.publication ?? "Lossless").slice(0, 60);
-  const pitch = (b.pitch ?? "").slice(0, 500);
 
-  const userPrompt =
-    "Assignment packet:\n\n" +
-    "Publication: " +
-    publication +
-    "\n" +
-    "Artist: " +
-    b.artist.slice(0, 100) +
-    "\n" +
-    "Release: " +
-    b.release.slice(0, 100) +
-    "\n" +
-    (pitch ? "Angle pitch: " + pitch : "(no specific angle)");
+  // New: accept a single prose `assignment` field. Legacy: structured fields.
+  let userPrompt: string;
+  if (typeof b.assignment === "string" && b.assignment.trim()) {
+    userPrompt = "Assignment:\n\n" + b.assignment.slice(0, 800);
+  } else {
+    if (!b.artist || typeof b.artist !== "string") {
+      return { status: 400, body: { error: "artist is required" } };
+    }
+    if (!b.release || typeof b.release !== "string") {
+      return { status: 400, body: { error: "release is required" } };
+    }
+    const publication = (b.publication ?? "Lossless").slice(0, 60);
+    const pitch = (b.pitch ?? "").slice(0, 500);
+    userPrompt =
+      "Assignment packet:\n\n" +
+      "Publication: " +
+      publication +
+      "\n" +
+      "Artist: " +
+      b.artist.slice(0, 100) +
+      "\n" +
+      "Release: " +
+      b.release.slice(0, 100) +
+      "\n" +
+      (pitch ? "Angle pitch: " + pitch : "(no specific angle)");
+  }
 
   const result = await callDemoLLM<{
     accepted: boolean;

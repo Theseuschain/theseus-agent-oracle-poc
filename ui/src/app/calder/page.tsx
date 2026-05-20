@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
 import TamperTest from "@/components/poa/TamperTest";
-import DemoClaim from "@/components/poa/DemoClaim";
 
 const POA_ID = "5SbV3eF8nP2qL7mR1xY4kJ9wT6vG3bC8aZ5oH2dN4uV9iW";
 const POA_URL = `https://theseus.network/poa/${POA_ID}`;
@@ -28,45 +27,32 @@ export default function CalderPage() {
     <main className="min-h-screen bg-bg text-fg">
       <TopBar mode="mock" />
       <div className="poa-shell">
-        <div className="max-w-[920px] mx-auto px-4 md:px-8 py-10">
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-            <div>
-              <p className="poa-stamp">Demo · calder</p>
-              <h1 className="mt-1 font-serif text-3xl text-[var(--poa-ink)] sm:text-4xl">
-                The tamper test for{" "}
-                <span className="italic">Calder</span>.
-              </h1>
-              <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[var(--poa-ink-soft)]">
-                Side-by-side demonstration: an operator-edited dispatch in a
-                centralized runtime vs. the same edit attempt against a
-                Theseus-anchored signature.
-              </p>
-            </div>
+        <div className="mx-auto max-w-[640px] px-4 py-14 md:px-6">
+          <div className="mb-10 flex items-baseline justify-between gap-4">
             <Link
               href="/"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              ← back to the directory
+              ← directory
             </Link>
-          </div>
-
-          <DemoClaim
-            claim="An operator can rewrite a centralized dispatch silently. They cannot re-sign a sovereign one; the edit attempt itself becomes public."
-            watchFor="Click any operator action. The left pane updates silently. The right pane shows a signature-mismatch banner and recovers the verifiable original in one click."
-          />
-
-          <TamperTest />
-
-          <div className="mt-12 pt-6 border-t border-[color:var(--poa-rule)] flex flex-wrap items-baseline justify-end gap-4">
             <a
               href={POA_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="poa-stamp underline decoration-[color:var(--poa-rule)] underline-offset-[4px] transition-colors hover:text-[var(--poa-ink)] hover:decoration-[color:var(--poa-ink)]"
+              className="text-[11px] uppercase tracking-[0.18em] text-[var(--poa-ink-soft)] transition-colors hover:text-[var(--poa-ink)]"
             >
-              See the credential on Proof of Agenthood ↗
+              on chain ↗
             </a>
           </div>
+
+          <p className="mb-14 text-[13.5px] leading-[1.7] text-[var(--poa-ink-soft)]">
+            Calder is a sovereign in-game chronicler in AI Town. His dispatches
+            are signed by his own key; the studio operator can't re-sign as
+            him. Try retconning the dispatch below — watch the signature
+            mismatch surface.
+          </p>
+
+          <TamperTest />
         </div>
       </div>
     </main>
